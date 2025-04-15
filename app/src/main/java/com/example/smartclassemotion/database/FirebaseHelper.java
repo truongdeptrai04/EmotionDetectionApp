@@ -85,6 +85,41 @@ public class FirebaseHelper {
         return mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
     }
 
+    public void getAllStudentsByUserId(String userId, StudentListCallback callback) {
+        db.collection("Classes")
+                .whereEqualTo("userId", userId)
+                .get()
+                .addOnSuccessListener(classSnapshot ->{
+                    List<String> classIds = new ArrayList<>();
+                    for(QueryDocumentSnapshot doc : classSnapshot){
+                        classIds.add(doc.getId());
+                    }
+                    if(classIds.isEmpty()){
+                        android.util.Log.d("FirebaseHelper", "No classes found for user: " + userId);
+                        callback.onStudentsLoaded(new ArrayList<>());
+                        return;
+                    }
+
+                    db.collection("Students")
+                            .whereIn("classId", classIds)
+                            .orderBy("studentName")
+                            .get()
+                            .addOnSuccessListener(studentSnapshot -> {
+                                List<Student> students = studentSnapshot.toObjects(Student.class);
+                                android.util.Log.d("FirebaseHelper", "Students loaded: " + students.size() + " students for userId: " + userId);
+                                callback.onStudentsLoaded(students);
+                            })
+                            .addOnFailureListener(e -> {
+                                android.util.Log.e("FirebaseHelper", "Failed to load students: " + e.getMessage());
+                                callback.onStudentsLoaded(new ArrayList<>());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("FirebaseHelper", "Failed to load classes: " + e.getMessage());
+                    callback.onStudentsLoaded(new ArrayList<>());
+                });
+    }
+
     public void getStudents(String classId, StudentListCallback callback) {
         db.collection("Students")
                 .whereEqualTo("classId", classId)

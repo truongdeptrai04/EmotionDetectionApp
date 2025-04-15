@@ -12,16 +12,13 @@ public class Student {
     private String email;
     private String phone;
     private String status;
-    private float happyPercent;
-    private float sadPercent;
-    private float angryPercent;
-    private float neutralPercent;
-
+    private String mood;
+    private String notes;
     public Student() {
     }
 
     public Student(String studentId, String classId, String studentCode, String studentName,
-                   Timestamp dateOfBirth, String gender, String email, String phone, String status) {
+                   Timestamp dateOfBirth, String gender, String email, String phone, String status, String mood, String notes) {
         this.studentId = studentId;
         this.classId = classId;
         this.studentCode = studentCode;
@@ -31,10 +28,8 @@ public class Student {
         this.email = email;
         this.phone = phone;
         this.status = status;
-        this.happyPercent = 0f;
-        this.sadPercent = 0f;
-        this.angryPercent = 0f;
-        this.neutralPercent = 0f;
+        this.mood = mood;
+        this.notes = notes;
     }
 
     // Getter và Setter
@@ -56,12 +51,20 @@ public class Student {
     public void setPhone(String phone) { this.phone = phone; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-    public float getHappyPercent() { return happyPercent; }
-    public void setHappyPercent(float happyPercent) { this.happyPercent = happyPercent; }
-    public float getSadPercent() { return sadPercent; }
-    public void setSadPercent(float sadPercent) { this.sadPercent = sadPercent; }
-    public float getAngryPercent() { return angryPercent; }
-    public void setAngryPercent(float angryPercent) { this.angryPercent = angryPercent; }
-    public float getNeutralPercent() { return neutralPercent; }
-    public void setNeutralPercent(float neutralPercent) { this.neutralPercent = neutralPercent; }
+
+    public String getMood() {
+        return mood;
+    }
+
+    public void setMood(String mood) {
+        this.mood = mood;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
 }

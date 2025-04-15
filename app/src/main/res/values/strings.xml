@@ -5,4 +5,15 @@
     <string name="underline_signup"><u>Sign up</u></string>
     <string name="signup">Sign up</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string-array name="class_options">
+        <item>All Classes</item>
+        <item>Math</item>
+        <item>Science</item>
+    </string-array>
+    <string-array name="class_list">
+        <item>Math</item>
+        <item>Chemistry</item>
+        <item>Biology</item>
+        <item>Physics</item>
+    </string-array>
 </resources>

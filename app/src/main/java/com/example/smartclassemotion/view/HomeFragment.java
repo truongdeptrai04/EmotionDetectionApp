@@ -13,6 +13,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.smartclassemotion.R;
 import com.example.smartclassemotion.database.FirebaseHelper;
 import com.example.smartclassemotion.databinding.FragmentHomeBinding;
 import com.example.smartclassemotion.models.ClassItem;
@@ -59,7 +60,7 @@ public class HomeFragment extends Fragment {
         binding.classRecyclerView.setAdapter(classAdapter);
 
         loadClassesFromFireStore(userId);
-        setupMenuBar();
+        setupMenuBar(userId);
         setupAddClassButton(userId);
 
         return root;
@@ -149,7 +150,7 @@ public class HomeFragment extends Fragment {
         Log.d(TAG, "Hiding add class frame");
     }
 
-    private void setupMenuBar() {
+    private void setupMenuBar(String userId) {
         NavController navController = NavHostFragment.findNavController(this);
 
         binding.menuClasses.setOnClickListener(view -> {
@@ -161,12 +162,24 @@ public class HomeFragment extends Fragment {
         });
 
         binding.menuStudent.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Student clicked", Toast.LENGTH_SHORT).show();
+            if(userId == null) {
+                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+            }else{
+                navigateToStudentFragment(userId);
+            }
         });
 
         binding.menuSettings.setOnClickListener(v -> {
             Toast.makeText(getContext(), "Settings clicked", Toast.LENGTH_SHORT).show();
         });
+    }
+
+    private void navigateToStudentFragment(String userId) {
+        Bundle bundle = new Bundle();
+        bundle.putString("user_id", userId);
+        NavController navController = NavHostFragment.findNavController(this);
+        navController.navigate(R.id.action_homeFragment_to_studentFragment, bundle);
+        Log.d(TAG, "Navigating to StudentFragment with userId: " + userId);
     }
 
     @Override

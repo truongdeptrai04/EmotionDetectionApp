@@ -4,6 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
+
+    <!-- Login Fragments -->
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.smartclassemotion.view.LoginFragment"
@@ -20,6 +22,8 @@
                 app:argType="string" />
         </action>
     </fragment>
+
+    <!-- Signup Fragments -->
     <fragment
         android:id="@+id/signupFragment"
         android:name="com.example.smartclassemotion.view.SignupFragment"
@@ -29,6 +33,8 @@
             android:id="@+id/action_signupFragment_to_loginFragment"
             app:destination="@id/loginFragment" />
     </fragment>
+
+    <!-- Home Fragments -->
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.example.smartclassemotion.view.HomeFragment"
@@ -47,7 +53,16 @@
                 android:name="student_count"
                 app:argType="integer"/>
         </action>
+        <action
+            android:id="@+id/action_homeFragment_to_studentFragment"
+            app:destination="@id/studentFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"
+                android:defaultValue="@null"/>
+        </action>
     </fragment>
+    <!-- Class Detail Fragments -->
     <fragment
         android:id="@+id/classDetailFragment"
         android:name="com.example.smartclassemotion.view.ClassDetailFragment"
@@ -58,5 +73,51 @@
             app:destination="@+id/homeFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="false"/>
+    </fragment>
+
+    <!-- Student Fragments -->
+    <fragment
+        android:id="@+id/studentFragment"
+        android:name="com.example.smartclassemotion.view.StudentFragment"
+        android:label="Student"
+        tools:layout="@layout/fragment_student">
+        <action
+            android:id="@+id/action_studentFragment_to_homeFragment"
+            app:destination="@id/homeFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_studentFragment_to_studentProfileFragment"
+            app:destination="@id/studentProfileFragment" >
+            <argument
+                android:name="student_id"
+                app:argType="string"
+                android:defaultValue="@null"/>
+            <argument
+                android:name="user_id"
+                app:argType="string"
+                android:defaultValue="@null"/>
+        </action>
+    </fragment>
+
+    <!-- Student Profile Fragments -->
+    <fragment
+        android:id="@+id/studentProfileFragment"
+        android:name="com.example.smartclassemotion.view.StudentProfileFragment"
+        android:label="Student Profile"
+        tools:layout="@layout/fragment_student_profile">
+        <action
+            android:id="@+id/action_studentProfileFragment_to_studentFragment"
+            app:destination="@id/studentFragment">
+        </action>
+        <action
+            android:id="@+id/action_studentProfileFragment_to_homeFragment"
+            app:destination="@id/homeFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
     </fragment>
 </navigation>

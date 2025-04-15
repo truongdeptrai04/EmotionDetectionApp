@@ -1,11 +1,15 @@
 package com.example.smartclassemotion.viewmodel;
 
 import android.annotation.SuppressLint;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.smartclassemotion.R;
 import com.example.smartclassemotion.databinding.ItemStudentBinding;
 import com.example.smartclassemotion.models.Student;
 import com.example.smartclassemotion.utils.OnStudentActionListener;
@@ -64,5 +68,4 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
             binding.deleteStudentBtn.setOnClickListener(v -> listener.onDelete(student));
         }
     }
-
 }
