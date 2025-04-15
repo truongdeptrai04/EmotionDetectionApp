@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Màu nền hồng nhạt -->
+    <solid android:color="#FFE4E1" /> <!-- Mã màu hồng nhạt (Misty Rose) -->
+
+    <!-- Bo góc: chỉ bo top-left và top-right -->
+    <corners
+        android:topLeftRadius="26dp"
+        android:topRightRadius="26dp"
+        android:bottomLeftRadius="0dp"
+        android:bottomRightRadius="0dp" />
+</shape>

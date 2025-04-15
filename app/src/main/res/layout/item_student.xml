@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <!-- Tên học sinh -->
+        <TextView
+            android:id="@+id/student_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Student Name"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- Tình trạng (Active/Inactive) -->
+        <TextView
+            android:id="@+id/student_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Active"
+            android:textSize="14sp"
+            android:textColor="#4CAF50"
+        android:layout_marginStart="8dp" />
+
+        <!-- Nút Edit -->
+
+        <!-- Nút Delete -->
+        <ImageButton
+            android:id="@+id/edit_student_btn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Edit Student"
+            android:src="@drawable/ic_edit" />
+
+        <ImageButton
+            android:id="@+id/delete_student_btn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Delete Student"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
