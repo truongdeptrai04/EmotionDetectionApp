@@ -28,7 +28,7 @@ public class ClassDetailFragment extends Fragment {
     private FirebaseHelper firebaseHelper;
     private String classId;
     private String className;
-    private int studentCount;
+    private String userId;
     private List<Student> studentList = new ArrayList<>();
     private List<Map<String, Float>> emotionStatsList = new ArrayList<>();
     private StudentEmotionAdapter studentEmotionAdapter;
@@ -46,15 +46,12 @@ public class ClassDetailFragment extends Fragment {
         if (args != null) {
             classId = args.getString("class_id");
             className = args.getString("class_name");
-            studentCount = args.getInt("student_count", 0); // Sửa lại để lấy int thay vì parse String
-            Log.d(TAG, "Received args - classId: " + classId + ", className: " + className + ", studentCount: " + studentCount);
+            userId = args.getString("user_id");
+            Log.d(TAG, "Received args - classId: " + classId + ", className: " + className + ", userId: " + userId);
             binding.classNameTv.setText(className != null ? className : "Unknown Class");
-            binding.studentCount.setText(String.valueOf(studentCount));
         } else {
             Log.w(TAG, "No arguments received");
             Toast.makeText(getContext(), "No class data received", Toast.LENGTH_SHORT).show();
-            binding.classNameTv.setText("Unknown Class");
-            binding.studentCount.setText("0");
         }
 
         binding.studentRecycleView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -69,7 +66,7 @@ public class ClassDetailFragment extends Fragment {
 
         binding.backBtn.setOnClickListener(v -> {
             NavController navController = NavHostFragment.findNavController(this);
-            navController.navigate(R.id.action_classDetailFragment_to_homeFragment);
+            navigateToHomeFragment(navController);
         });
 
         setupMenuBar();
@@ -114,7 +111,9 @@ public class ClassDetailFragment extends Fragment {
                 android.graphics.Color.parseColor("#4CAF50"), // Happy - Xanh lá
                 android.graphics.Color.parseColor("#F44336"), // Sad - Đỏ
                 android.graphics.Color.parseColor("#FF9800"), // Angry - Cam
-                android.graphics.Color.parseColor("#9E9E9E")  // Neutral - Xám
+                android.graphics.Color.parseColor("#9E9E9E"), // Neutral - Xám
+                android.graphics.Color.parseColor("#06b3c9"),
+                android.graphics.Color.parseColor("#c910c6"),
         };
         int colorIndex = 0;
 
@@ -135,22 +134,61 @@ public class ClassDetailFragment extends Fragment {
         NavController navController = NavHostFragment.findNavController(this);
 
         binding.menuClasses.setOnClickListener(v -> {
-            navController.navigate(R.id.action_classDetailFragment_to_homeFragment);
+            navigateToHomeFragment(navController);
         });
 
         binding.menuReports.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Reports clicked", Toast.LENGTH_SHORT).show();
+            navigateToReportFragment(navController);
         });
 
         binding.menuStudent.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Student clicked", Toast.LENGTH_SHORT).show();
+            navigateToStudentFragment(navController);
         });
 
         binding.menuSettings.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Settings clicked", Toast.LENGTH_SHORT).show();
+            navigateToSettingFragment(navController);
         });
     }
-
+    private void navigateToHomeFragment(NavController navController) {
+        if (userId == null) {
+            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+        } else {
+            Bundle bundle = new Bundle();
+            bundle.putString("user_id", userId);
+            navController.navigate(R.id.action_classDetailFragment_to_homeFragment, bundle);
+            Log.d(TAG, "Navigating to HomeFragment with userId: " + userId);
+        }
+    }
+    private void navigateToStudentFragment(NavController navController) {
+        if (userId == null) {
+            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+        } else {
+            Bundle bundle = new Bundle();
+            bundle.putString("user_id", userId);
+            navController.navigate(R.id.action_classDetailFragment_to_studentFragment, bundle);
+            Log.d(TAG, "Navigating to StudentFragment with userId: " + userId);
+        }
+    }
+    private void navigateToSettingFragment(NavController navController){
+        if (userId == null) {
+            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+        } else {
+            Bundle bundle = new Bundle();
+            bundle.putString("user_id", userId);
+            navController.navigate(R.id.action_classDetailFragment_to_settingFragment, bundle);
+            Log.d(TAG, "Navigating to SettingFragment with userId: " + userId);
+        }
+    }
+    private void navigateToReportFragment(NavController navController){
+        if (userId == null) {
+            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+        } else {
+            Bundle bundle = new Bundle();
+            bundle.putString("user_id", userId);
+            navController.navigate(R.id.action_classDetailFragment_to_reportFragment, bundle);
+            Log.d(TAG, "Navigating to ReportFragment with userId: " + userId);
+        }
+    }
     @Override
     public void onDestroyView() {
         super.onDestroyView();

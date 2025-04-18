@@ -62,7 +62,6 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
         public void bind(Student student, Map<String, Float> emotionStats) {
             binding.studentName.setText(student.getStudentName());
 
-            // Lấy giá trị từ emotionStats cho cả progress và text, đảm bảo key khớp với FirebaseHelper
             int happyValue = Math.round(emotionStats.getOrDefault("happy", 0f));
             binding.happyProgress.setProgress(happyValue);
             binding.happyPercent.setText(happyValue + "%");
@@ -78,6 +77,14 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
             int neutralValue = Math.round(emotionStats.getOrDefault("neutral", 0f));
             binding.neutralProgress.setProgress(neutralValue);
             binding.neutralPercent.setText(neutralValue + "%");
+
+            int fearValue = Math.round(emotionStats.getOrDefault("fear", 0f));
+            binding.fearProgress.setProgress(fearValue);
+            binding.fearPercent.setText(fearValue + "%");
+
+            int surpriseValue = Math.round(emotionStats.getOrDefault("surprise", 0f));
+            binding.surpriseProgress.setProgress(surpriseValue);
+            binding.surprisePercent.setText(surpriseValue + "%");
         }
     }
 }

@@ -7,4 +7,5 @@ import java.util.Map;
 
 public interface StudentListCallback {
     void onStudentsLoaded(List<Student> students);
+    void onError(String errorMessage);
 }

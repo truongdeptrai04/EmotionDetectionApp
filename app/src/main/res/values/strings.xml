@@ -5,6 +5,47 @@
     <string name="underline_signup"><u>Sign up</u></string>
     <string name="signup">Sign up</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="select_status">Select Status</string>
+    <string name="settings_title">Settings</string>
+    <string name="preferences_title">Preferences</string>
+    <string name="language_label">Language</string>
+    <string name="report_update_label">Report Update Frequency</string>
+    <string name="notifications_sync_title">Notifications &amp; Sync</string>
+    <string name="push_notifications_label">Push Notifications</string>
+    <string name="push_notifications_description">Receive alerts about student emotions</string>
+    <string name="background_data_label">Background Data Sync</string>
+    <string name="background_data_description">Keep emotion data up to date</string>
+    <string name="dark_mode_label">Dark Mode</string>
+    <string name="dark_mode_description">Enable dark theme</string>
+    <string name="menu_classes">Classes</string>
+    <string name="menu_reports">Reports</string>
+    <string name="menu_student">Student</string>
+    <string name="menu_settings">Settings</string>
+    <string name="select_class">Select Class</string>
+    <string name="language_changed_to">Language set to %s</string>
+    <string name="report_update_set_to">Report update set to %s</string>
+    <string name="push_notifications_toggled">Push notifications %s</string>
+    <string name="background_data_toggled">Background data sync %s</string>
+    <string name="dark_mode_toggled">Dark mode %s</string>
+    <string name="user_id_not_found">User ID not found</string>
+    <string name="already_in_settings">Already in Settings</string>
+    <string name="manage_students_title">Manage Students</string>
+    <string name="students_label">Students</string>
+    <string name="search_students_hint">Search Students...</string>
+    <string name="add_student">Add student</string>
+    <string name="add_student_title">Add Student</string>
+    <string name="upload_avatar">Upload Avatar</string>
+    <string name="student_name_hint">Student Name</string>
+    <string name="date_of_birth_hint">Date of Birth</string>
+    <string name="email_hint">Email</string>
+    <string name="phone_hint">Phone Number</string>
+    <string name="select_class_hint">Select Class</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="student_added">Student %s added successfully</string>
+    <string name="failed_to_add_student">Failed to add student</string>
+    <string name="invalid_input">Please fill all required fields</string>
+
     <string-array name="class_options">
         <item>All Classes</item>
         <item>Math</item>
@@ -15,5 +56,33 @@
         <item>Chemistry</item>
         <item>Biology</item>
         <item>Physics</item>
+    </string-array>
+    <string-array name="day_of_week">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+    <string name="select_day_of_week">Select Day Of Week</string>
+    <string-array name="status_list">
+        <item>Active</item>
+        <item>Inactive</item>
+    </string-array>
+    <string-array name="language_options">
+        <item>English</item>
+        <item>Vietnamese</item>
+    </string-array>
+    <string-array name="report_update_options">
+        <item>Daily</item>
+        <item>Weekly</item>
+        <item>Monthly</item>
+    </string-array>
+    <string-array name="gender_options">
+        <item>Male</item>
+        <item>Female</item>
+        <item>Other</item>
     </string-array>
 </resources>

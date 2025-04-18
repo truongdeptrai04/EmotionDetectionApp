@@ -1,11 +1,8 @@
 package com.example.smartclassemotion.viewmodel;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
@@ -13,16 +10,21 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smartclassemotion.R;
+import com.example.smartclassemotion.database.FirebaseHelper;
 import com.example.smartclassemotion.databinding.ClassItemBinding;
 import com.example.smartclassemotion.models.ClassItem;
+
 import java.util.List;
 
 public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHolder> {
-
+    private String userId;
     private List<ClassItem> classList;
+    private FirebaseHelper firebaseHelper;
 
-    public ClassAdapter(List<ClassItem> classList) {
+    public ClassAdapter(List<ClassItem> classList, String userId) {
         this.classList = classList;
+        this.userId = userId;
+        this.firebaseHelper = new FirebaseHelper();
     }
 
     @NonNull
@@ -31,10 +33,11 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
         ClassItemBinding binding = ClassItemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
         return new ClassViewHolder(binding);
     }
+
     @Override
     public void onBindViewHolder(ClassViewHolder holder, int position) {
-        ClassItem classItem = classList.get(position);
-        holder.bind(classItem);
+        ClassItem aClass = classList.get(position);
+        holder.bind(aClass);
     }
 
     @Override
@@ -42,28 +45,40 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
         return classList.size();
     }
 
-    static class ClassViewHolder extends RecyclerView.ViewHolder {
+    class ClassViewHolder extends RecyclerView.ViewHolder {
         private final ClassItemBinding binding;
-
-        ClassViewHolder(ClassItemBinding binding) {
+        public ClassViewHolder(ClassItemBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
+
         public void bind(ClassItem classItem){
             binding.className.setText(classItem.getClassName());
-            binding.studentCount.setText(String.valueOf(classItem.getStudentCount()));
-            binding.classTime.setText(classItem.getClassTime());
-            binding.emotionRating.setText(classItem.getEmotionRating());
 
-            binding.getRoot().setOnClickListener(v ->{
+            firebaseHelper.getDb().collection("StudentClasses")
+                    .whereEqualTo("classId", classItem.getClassId())
+                    .get()
+                    .addOnSuccessListener(querySnapshot ->{
+                        int studentCount = querySnapshot.size();
+                        binding.studentCount.setText(String.valueOf(studentCount));
+                    })
+                    .addOnFailureListener(e -> {
+                        binding.studentCount.setText("0");
+                        android.util.Log.e("ClassAdapter", "Error getting student count" + e.getMessage());
+                    });
+            binding.classTime.setText(classItem.getFormattedTime());
+            binding.emotionRating.setText(classItem.getDescription() != null && !classItem.getDescription().isEmpty() ? classItem.getDescription() : "No description");
+
+            binding.getRoot().setOnClickListener(v -> {
                 NavController navController = Navigation.findNavController(v);
-                Bundle args = new Bundle();
-                args.putString("class_id", classItem.getClassId());
-                args.putString("class_name", classItem.getClassName());
-                args.putInt("student_count", classItem.getStudentCount());
-                android.util.Log.d("ClassAdapter", "Navigating with classId: " + classItem.getClassId() + ", className: " + classItem.getClassName() + ", studentCount: " + classItem.getStudentCount());
-                navController.navigate(R.id.action_homeFragment_to_classDetailFragment, args);
+                Bundle bundle = new Bundle();
+                bundle.putString("user_id", userId);
+                bundle.putString("class_id", classItem.getClassId());
+                bundle.putString("class_name", classItem.getClassName());
+                android.util.Log.d("ClassAdapter", "Class ID: " + classItem.getClassId() + "ClassName: " + classItem.getClassName() + " User ID: " + userId);
+                navController.navigate(R.id.action_homeFragment_to_classDetailFragment, bundle);
             });
         }
     }
+
 }

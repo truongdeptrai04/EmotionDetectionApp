@@ -8,57 +8,18 @@
     android:background="#161B58">
 
     <!-- Header -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <ImageView
-            android:id="@+id/back_btn"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_back"
-            android:layout_marginTop="10sp"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginStart="10dp"
-            />
+        android:background="#161B58"
+        android:fontFamily="@font/agbalumo"
+        android:textSize="26sp"
+        android:layout_marginTop="20sp"
+        android:layout_marginStart="15dp"
+        android:text="Real Time \n Alerts"
+        android:textColor="#E792A4" />
 
-        <TextView
-            android:id="@+id/class_name_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="#161B58"
-            android:fontFamily="@font/agbalumo"
-            android:textSize="26sp"
-            android:layout_marginTop="10sp"
-            android:layout_marginStart="5dp"
-            android:gravity="center"
-            android:text="Class name"
-            android:textColor="#E792A4" />
-    </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/student_count"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginStart="55dp"
-            android:text=""
-            android:textColor="@color/white"
-            android:textSize="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text=" Students"
-            android:layout_marginStart="2dp"
-            android:textSize="16sp"
-            android:textColor="@color/white" />
-    </LinearLayout>
 
     <!-- RecyclerView hiển thị danh sách lớp học -->
     <LinearLayout
@@ -69,38 +30,29 @@
         android:background="@drawable/rounded_top_white_background"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView
-                android:layout_marginTop="10dp"
-                android:layout_marginStart="10dp"
-                android:textSize="16sp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Class emotion Summary"/>
-
-            <org.eazegraph.lib.charts.PieChart
-                android:id="@+id/emotion_pie_chart"
-                android:layout_width="match_parent"
-                android:layout_height="180dp"
-                android:layout_margin="10dp" />
-        </LinearLayout>
-        <TextView
+        <androidx.appcompat.widget.SearchView
+            android:id="@+id/student_search"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:textSize="16sp"
-            android:text="Individual Student Reports"/>
+            android:layout_margin="8dp"
+            android:queryHint="Search Students..."/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/student_recycle_view"
             android:layout_width="match_parent"
-            android:layout_marginTop="16dp"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:padding="8dp" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/add_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:layout_margin="16dp"
+            android:backgroundTint="#E792A4"
+            android:contentDescription="Add student"
+            android:src="@drawable/baseline_add_24_black"/>
     </LinearLayout>
 
     <!-- Menu bar dưới cùng -->

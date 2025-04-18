@@ -61,7 +61,25 @@
                 app:argType="string"
                 android:defaultValue="@null"/>
         </action>
+        <action
+            android:id="@+id/action_homeFragment_to_settingFragment"
+            app:destination="@id/settingFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_homeFragment_to_reportFragment"
+            app:destination="@id/reportFragment">
+            <argument
+                android:name="class_id"
+                app:argType="string"/>
+            <argument
+                android:name="class_name"
+                app:argType="string"/>
+        </action>
     </fragment>
+
     <!-- Class Detail Fragments -->
     <fragment
         android:id="@+id/classDetailFragment"
@@ -72,7 +90,35 @@
             android:id="@+id/action_classDetailFragment_to_homeFragment"
             app:destination="@+id/homeFragment"
             app:popUpTo="@id/homeFragment"
-            app:popUpToInclusive="false"/>
+            app:popUpToInclusive="false">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_classDetailFragment_to_settingFragment"
+            app:destination="@id/settingFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_classDetailFragment_to_studentFragment"
+            app:destination="@id/studentFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_classDetailFragment_to_reportFragment"
+            app:destination="@id/reportFragment">
+            <argument
+                android:name="class_id"
+                app:argType="string"/>
+            <argument
+                android:name="class_name"
+                app:argType="string"/>
+        </action>
     </fragment>
 
     <!-- Student Fragments -->
@@ -100,6 +146,20 @@
                 app:argType="string"
                 android:defaultValue="@null"/>
         </action>
+        <action
+            android:id="@+id/action_studentFragment_to_settingFragment"
+            app:destination="@id/settingFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_studentFragment_to_reportFragment"
+            app:destination="@id/reportFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
     </fragment>
 
     <!-- Student Profile Fragments -->
@@ -111,6 +171,9 @@
         <action
             android:id="@+id/action_studentProfileFragment_to_studentFragment"
             app:destination="@id/studentFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
         </action>
         <action
             android:id="@+id/action_studentProfileFragment_to_homeFragment"
@@ -119,5 +182,48 @@
                 android:name="user_id"
                 app:argType="string"/>
         </action>
+        <action
+            android:id="@+id/action_studentProfileFragment_to_settingFragment"
+            app:destination="@id/settingFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+    </fragment>
+    <!-- Setting Fragments -->
+    <fragment
+        android:id="@+id/settingFragment"
+        android:name="com.example.smartclassemotion.view.SettingFragment"
+        android:label="Setting"
+        tools:layout="@layout/fragment_setting">
+        <action
+            android:id="@+id/action_settingFragment_to_homeFragment"
+            app:destination="@id/homeFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_settingFragment_to_studentFragment"
+            app:destination="@id/studentFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+        <action
+            android:id="@+id/action_settingFragment_to_reportFragment"
+            app:destination="@id/reportFragment">
+            <argument
+                android:name="user_id"
+                app:argType="string"/>
+        </action>
+    </fragment>
+
+    <!--Report Fragment -->
+    <fragment
+        android:id="@+id/reportFragment"
+        android:name="com.example.smartclassemotion.view.ReportFragment"
+        android:label="Report"
+        tools:layout="@layout/fragment_report">
     </fragment>
 </navigation>
