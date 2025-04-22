@@ -20,11 +20,17 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
     private String userId;
     private List<ClassItem> classList;
     private FirebaseHelper firebaseHelper;
+    private final OnClassActionListener actionListener;
 
-    public ClassAdapter(List<ClassItem> classList, String userId) {
+    public interface OnClassActionListener {
+        void onEditClass(ClassItem classItem);
+    }
+
+    public ClassAdapter(List<ClassItem> classList, String userId, OnClassActionListener actionListener) {
         this.classList = classList;
         this.userId = userId;
         this.firebaseHelper = new FirebaseHelper();
+        this.actionListener = actionListener;
     }
 
     @NonNull
@@ -47,25 +53,27 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
 
     class ClassViewHolder extends RecyclerView.ViewHolder {
         private final ClassItemBinding binding;
+
         public ClassViewHolder(ClassItemBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
 
-        public void bind(ClassItem classItem){
+        public void bind(ClassItem classItem) {
             binding.className.setText(classItem.getClassName());
 
             firebaseHelper.getDb().collection("StudentClasses")
                     .whereEqualTo("classId", classItem.getClassId())
                     .get()
-                    .addOnSuccessListener(querySnapshot ->{
+                    .addOnSuccessListener(querySnapshot -> {
                         int studentCount = querySnapshot.size();
                         binding.studentCount.setText(String.valueOf(studentCount));
                     })
                     .addOnFailureListener(e -> {
                         binding.studentCount.setText("0");
-                        android.util.Log.e("ClassAdapter", "Error getting student count" + e.getMessage());
+                        android.util.Log.e("ClassAdapter", "Error getting student count: " + e.getMessage());
                     });
+
             binding.classTime.setText(classItem.getFormattedTime());
             binding.emotionRating.setText(classItem.getDescription() != null && !classItem.getDescription().isEmpty() ? classItem.getDescription() : "No description");
 
@@ -75,10 +83,16 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
                 bundle.putString("user_id", userId);
                 bundle.putString("class_id", classItem.getClassId());
                 bundle.putString("class_name", classItem.getClassName());
-                android.util.Log.d("ClassAdapter", "Class ID: " + classItem.getClassId() + "ClassName: " + classItem.getClassName() + " User ID: " + userId);
+                android.util.Log.d("ClassAdapter", "Class ID: " + classItem.getClassId() + ", ClassName: " + classItem.getClassName() + ", User ID: " + userId);
                 navController.navigate(R.id.action_homeFragment_to_classDetailFragment, bundle);
+            });
+
+            binding.editBtn.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onEditClass(classItem);
+                }
+                android.util.Log.d("ClassAdapter", "Edit button clicked for classId: " + classItem.getClassId());
             });
         }
     }
-
 }

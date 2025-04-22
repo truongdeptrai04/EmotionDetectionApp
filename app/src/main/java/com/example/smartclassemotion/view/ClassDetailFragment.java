@@ -42,47 +42,54 @@ public class ClassDetailFragment extends Fragment {
         View root = binding.getRoot();
         firebaseHelper = new FirebaseHelper();
 
+        initializeArgument();
+        setupRecyclerView();
+        setupBackButton();
+        setupMenuBar();
+
+        if(classId != null){
+            binding.className.setText(className);
+            loadClassData(classId);
+        }else{
+            Log.w(TAG, "Class ID is null, cannot load class data");
+            showToast("No class data available");
+        }
+
+        return root;
+    }
+
+    private void initializeArgument(){
         Bundle args = getArguments();
         if (args != null) {
             classId = args.getString("class_id");
             className = args.getString("class_name");
             userId = args.getString("user_id");
             Log.d(TAG, "Received args - classId: " + classId + ", className: " + className + ", userId: " + userId);
-            binding.classNameTv.setText(className != null ? className : "Unknown Class");
         } else {
             Log.w(TAG, "No arguments received");
             Toast.makeText(getContext(), "No class data received", Toast.LENGTH_SHORT).show();
         }
+    }
 
+    private void setupRecyclerView() {
         binding.studentRecycleView.setLayoutManager(new LinearLayoutManager(getContext()));
         studentEmotionAdapter = new StudentEmotionAdapter(studentList, emotionStatsList);
         binding.studentRecycleView.setAdapter(studentEmotionAdapter);
+    }
 
-        if (classId != null) {
-            loadClassData(classId);
-        } else {
-            Log.w(TAG, "classId is null, cannot load data");
-        }
-
-        binding.backBtn.setOnClickListener(v -> {
-            NavController navController = NavHostFragment.findNavController(this);
-            navigateToHomeFragment(navController);
-        });
-
-        setupMenuBar();
-
-        return root;
+    private void setupBackButton(){
+        binding.backBtn.setOnClickListener(v -> navigateToHomeFragment());
     }
 
     @SuppressLint("NotifyDataSetChanged")
     private void loadClassData(String classId) {
         firebaseHelper.getEmotionStats(classId, emotionStats -> {
-            if (getActivity() != null) {
-                Log.d(TAG, "Emotion stats loaded: " + emotionStats.toString());
-                setupPieChart(emotionStats);
-            } else {
+            if(getActivity() == null){
                 Log.w(TAG, "Activity is null, cannot update pie chart");
+                return;
             }
+            Log.d(TAG, "Emotion stats loaded: " + emotionStats);
+            setupPieChart(emotionStats);
         });
 
         firebaseHelper.getStudentEmotionStats(classId, (students, emotionStats) -> {
@@ -96,99 +103,100 @@ public class ClassDetailFragment extends Fragment {
                 studentEmotionAdapter.notifyDataSetChanged();
             } else {
                 Log.w(TAG, "Activity is null, cannot update student list");
+                return;
             }
         });
     }
 
     private void setupPieChart(Map<String, Float> emotionStats) {
         binding.emotionPieChart.clearChart();
-        if (emotionStats.isEmpty()) {
-            Log.w(TAG, "Emotion stats is empty, no data to display in pie chart");
+        if(!hasValidEmotionData(emotionStats)) {
+            Log.d(TAG, "No valid emotion data to display");
+            binding.emotionPieChart.addPieSlice(new PieModel(
+                    "No Data",
+                    100,
+                    0xFF9E9E9E // Gray
+            ));
+            binding.emotionPieChart.startAnimation();
+            showToast("No data available");
             return;
         }
-
         int[] colors = {
-                android.graphics.Color.parseColor("#4CAF50"), // Happy - Xanh lá
-                android.graphics.Color.parseColor("#F44336"), // Sad - Đỏ
-                android.graphics.Color.parseColor("#FF9800"), // Angry - Cam
-                android.graphics.Color.parseColor("#9E9E9E"), // Neutral - Xám
-                android.graphics.Color.parseColor("#06b3c9"),
-                android.graphics.Color.parseColor("#c910c6"),
+                0xFF4CAF50, // Happy - Xanh lá
+                0xFFF44336, // Sad - Đỏ
+                0xFFFF9800, // Angry - Cam
+                0xFF9E9E9E, // Neutral - Xám
+                0xFF06B3C9, // Fear - Cyan
+                0xFFC910C6  // Surprise - Tím
         };
         int colorIndex = 0;
-
         for (Map.Entry<String, Float> entry : emotionStats.entrySet()) {
-            binding.emotionPieChart.addPieSlice(new PieModel(
-                    entry.getKey(),
-                    entry.getValue(),
-                    colors[colorIndex % colors.length]
-            ));
-            colorIndex++;
+            float value = entry.getValue();
+            if(value>0){
+                binding.emotionPieChart.addPieSlice(new PieModel(
+                        entry.getKey(),
+                        entry.getValue(),
+                        colors[colorIndex % colors.length]
+                ));
+                colorIndex++;
+            }
         }
         binding.emotionPieChart.setInnerValueUnit("%");
         binding.emotionPieChart.setDrawValueInPie(true);
         binding.emotionPieChart.startAnimation();
     }
 
+    private boolean hasValidEmotionData(Map<String, Float> emotionStats) {
+        if(emotionStats == null || emotionStats.isEmpty()) {
+            Log.w(TAG, "Emotion stats is null or empty");
+            return false;
+        }
+        for (Float value : emotionStats.values()) {
+            if (value != null && value >0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void setupMenuBar() {
-        NavController navController = NavHostFragment.findNavController(this);
-
-        binding.menuClasses.setOnClickListener(v -> {
-            navigateToHomeFragment(navController);
-        });
-
-        binding.menuReports.setOnClickListener(v -> {
-            navigateToReportFragment(navController);
-        });
-
-        binding.menuStudent.setOnClickListener(v -> {
-            navigateToStudentFragment(navController);
-        });
-
-        binding.menuSettings.setOnClickListener(v -> {
-            navigateToSettingFragment(navController);
-        });
+        binding.menuClasses.setOnClickListener(v -> {navigateToHomeFragment();});
+        binding.menuReports.setOnClickListener(v -> {navigateToReportFragment();});
+        binding.menuStudent.setOnClickListener(v -> {navigateToStudentFragment();});
+        binding.menuSettings.setOnClickListener(v -> {navigateToSettingFragment();});
     }
-    private void navigateToHomeFragment(NavController navController) {
-        if (userId == null) {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-        } else {
+    private void navigateToHomeFragment() {
+        navigateTo(R.id.action_classDetailFragment_to_homeFragment);
+    }
+    private void navigateToStudentFragment() {
+        navigateTo(R.id.action_classDetailFragment_to_studentFragment);
+    }
+    private void navigateToSettingFragment(){
+        navigateTo(R.id.action_classDetailFragment_to_settingFragment);
+    }
+    private void navigateToReportFragment(){
+        navigateTo(R.id.action_classDetailFragment_to_alertFragment);
+    }
+
+
+    private void navigateTo(int actionId){
+        if(userId == null){
+            showToast("User ID not found");
+        }else{
             Bundle bundle = new Bundle();
             bundle.putString("user_id", userId);
-            navController.navigate(R.id.action_classDetailFragment_to_homeFragment, bundle);
-            Log.d(TAG, "Navigating to HomeFragment with userId: " + userId);
+            NavController navController = NavHostFragment.findNavController(this);
+            navController.navigate(actionId, bundle);
+            Log.d(TAG, "Navigating to actionId: " + actionId + " with userId: " + userId);
         }
     }
-    private void navigateToStudentFragment(NavController navController) {
-        if (userId == null) {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-        } else {
-            Bundle bundle = new Bundle();
-            bundle.putString("user_id", userId);
-            navController.navigate(R.id.action_classDetailFragment_to_studentFragment, bundle);
-            Log.d(TAG, "Navigating to StudentFragment with userId: " + userId);
+
+    private void showToast(String message){
+        if(getContext() != null) {
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
         }
     }
-    private void navigateToSettingFragment(NavController navController){
-        if (userId == null) {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-        } else {
-            Bundle bundle = new Bundle();
-            bundle.putString("user_id", userId);
-            navController.navigate(R.id.action_classDetailFragment_to_settingFragment, bundle);
-            Log.d(TAG, "Navigating to SettingFragment with userId: " + userId);
-        }
-    }
-    private void navigateToReportFragment(NavController navController){
-        if (userId == null) {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-        } else {
-            Bundle bundle = new Bundle();
-            bundle.putString("user_id", userId);
-            navController.navigate(R.id.action_classDetailFragment_to_reportFragment, bundle);
-            Log.d(TAG, "Navigating to ReportFragment with userId: " + userId);
-        }
-    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();

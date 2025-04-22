@@ -148,7 +148,7 @@ public class SettingFragment extends Fragment {
         } else {
             Bundle bundle = new Bundle();
             bundle.putString("user_id", userId);
-            navController.navigate(R.id.action_settingFragment_to_reportFragment, bundle);
+            navController.navigate(R.id.action_settingFragment_to_alertFragment, bundle);
             Log.d(TAG, "Navigating to ReportFragment with userId: " + userId);
         }
     }

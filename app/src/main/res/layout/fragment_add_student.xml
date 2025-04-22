@@ -121,22 +121,6 @@
             android:inputType="phone" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Class Spinner -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/class_input_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:hintTextColor="#E792A4"
-        app:boxStrokeColor="#E792A4">
-
-        <Spinner
-            android:id="@+id/class_spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:spinnerMode="dropdown"
-            android:background="@drawable/spinner_background" />
-    </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Buttons -->
     <LinearLayout

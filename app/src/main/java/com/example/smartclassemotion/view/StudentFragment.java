@@ -31,6 +31,7 @@ import com.example.smartclassemotion.models.Student;
 import com.example.smartclassemotion.models.StudentClasses;
 import com.example.smartclassemotion.utils.ClassListCallback;
 import com.example.smartclassemotion.utils.OnImageUploadedCallback;
+import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentActionListener;
 import com.example.smartclassemotion.utils.OnStudentCountCallback;
@@ -66,16 +67,28 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         studentList = new ArrayList<>();
         originalStudentList = new ArrayList<>();
 
-        binding.studentRecycleView.setLayoutManager(new LinearLayoutManager(getContext()));
-        studentAdapter = new StudentAdapter(studentList, this);
-        binding.studentRecycleView.setAdapter(studentAdapter);
+        setupRecyclerView();
+        setupSearchView();
+        setupImagePicker();
+        setupAddButton();
+        setupMenuBar();
 
         if (userId != null) {
             loadStudentsByUserId(userId);
         } else {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
+            showToast("User ID not found");
         }
 
+        return root;
+    }
+
+    private void setupRecyclerView() {
+        binding.studentRecycleView.setLayoutManager(new LinearLayoutManager(getContext()));
+        studentAdapter = new StudentAdapter(studentList, this);
+        binding.studentRecycleView.setAdapter(studentAdapter);
+    }
+
+    private void setupSearchView() {
         binding.studentSearch.setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -89,60 +102,30 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
                 return true;
             }
         });
-
-        // Thêm sự kiện khi thoát khỏi SearchView
         binding.studentSearch.setOnCloseListener(() -> {
             filterStudent("");
             return false;
         });
+    }
 
+    private void setupImagePicker() {
         imagePickerLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (result.getResultCode() == getActivity().RESULT_OK && result.getData() != null) {
                 selectedImageUri = result.getData().getData();
-                Toast.makeText(getContext(), "Image selected: " + selectedImageUri.toString(), Toast.LENGTH_SHORT).show();
+                showToast("Image selected: " + selectedImageUri.toString());
             }
         });
+    }
 
+
+    private void setupAddButton() {
         binding.addBtn.setOnClickListener(v -> showAddStudentDialog());
-
-        setupMenuBar();
-
-        return root;
     }
 
     private void showAddStudentDialog() {
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         FragmentAddStudentBinding dialogBinding = FragmentAddStudentBinding.inflate(getLayoutInflater());
         dialog.setContentView(dialogBinding.getRoot());
-
-        List<ClassItem> classList = new ArrayList<>();
-        ArrayAdapter<String> classAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item);
-        classAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        dialogBinding.classSpinner.setAdapter(classAdapter);
-
-        if (userId != null) {
-            firebaseHelper.getClasses(userId, new ClassListCallback() {
-                @Override
-                public void onClassesLoaded(List<ClassItem> classItems) {
-                    classList.clear();
-                    classList.addAll(classItems);
-                    List<String> classNames = new ArrayList<>();
-                    for (ClassItem classItem : classItems) {
-                        classNames.add(classItem.getClassName());
-                    }
-                    classAdapter.clear();
-                    classAdapter.addAll(classNames);
-                    classAdapter.notifyDataSetChanged();
-                }
-
-                @Override
-                public void onError(String errorMessage) {
-
-                }
-            });
-        } else {
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-        }
 
         dialogBinding.dateOfBirthInput.setOnClickListener(v -> {
             Calendar calendar = Calendar.getInstance();
@@ -178,20 +161,19 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
             String gender = dialogBinding.genderSpinner.getSelectedItem() != null ? dialogBinding.genderSpinner.getSelectedItem().toString() : "";
             String email = dialogBinding.emailInput.getText() != null ? dialogBinding.emailInput.getText().toString().trim() : "";
             String phone = dialogBinding.phoneInput.getText() != null ? dialogBinding.phoneInput.getText().toString().trim() : "";
-            int classPosition = dialogBinding.classSpinner.getSelectedItemPosition();
-            String classId = classPosition >= 0 && classPosition < classList.size() ? classList.get(classPosition).getClassId() : null;
 
-            if (name.isEmpty() || dateOfBirthObj == null || gender.isEmpty() || email.isEmpty() || phone.isEmpty() || classId == null) {
-                Toast.makeText(getContext(), "Please fill all fields", Toast.LENGTH_SHORT).show();
+            if (!validateInput(name, dateOfBirthObj, gender, email, phone)) {
+                return;
             }
 
             Timestamp dateOfBirth = new Timestamp(((Long) dateOfBirthObj) / 1000, 0);
-            String studentId = UUID.randomUUID().toString();
 
-            firebaseHelper.getAllStudentCount(new OnStudentCountCallback() {
+            firebaseHelper.getMaxStudentId(userId, new OnMaxStudentIdCallback() {
                 @Override
-                public void onCountLoaded(long count) {
-                    String studentCode = String.format("HS%03d", count + 1);
+                public void onMaxStudentIdFound(int maxNumber) {
+                    int newNumber = maxNumber + 1;
+                    String studentId = String.format("std_%03d", newNumber);
+                    String studentCode = String.format("HS%03d", newNumber);
                     Student student = new Student();
                     student.setStudentId(studentId);
                     student.setStudentCode(studentCode);
@@ -202,68 +184,69 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
                     student.setPhone(phone);
                     student.setStatus("Active");
                     student.setNotes("");
+                    student.setUserId(userId);
 
                     if (selectedImageUri != null) {
                         firebaseHelper.uploadImage(selectedImageUri, "avatars/" + studentId, new OnImageUploadedCallback() {
                             @Override
                             public void onImageUploaded(String imageUrl) {
                                 student.setAvatarUrl(imageUrl);
-                                saveStudent(student, classId, name, dialog);
+                                saveStudent(student, name, dialog);
                             }
 
                             @Override
                             public void onError(Exception e) {
-                                Log.e(TAG, "Error uploading image", e);
-                                Toast.makeText(getContext(), "Error uploading image", Toast.LENGTH_SHORT).show();
+                                Log.e(TAG, "Error uploading image: " + e.getMessage(), e);
+                                showToast("Error uploading image");
                                 student.setAvatarUrl("ic_profile");
-                                saveStudent(student, classId, name, dialog);
+                                saveStudent(student, name, dialog);
                             }
                         });
                     } else {
                         student.setAvatarUrl("ic_profile");
-                        saveStudent(student, classId, name, dialog);
+                        saveStudent(student, name, dialog);
                     }
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    Log.e(TAG, "Error getting student count", e);
-                    Toast.makeText(getContext(), "Error getting student count", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error getting student count: " + e.getMessage(), e);
+                    showToast("Error getting student count");
                 }
             });
         });
         dialog.show();
     }
-
-    private void saveStudent(Student student, String classId, String studentName, BottomSheetDialog dialog) {
+    private boolean validateInput(String name, Object dateOfBirthObj, String gender, String email, String phone) {
+        if (name.isEmpty()) {showToast("Name cannot be empty");return false;}
+        if (dateOfBirthObj == null) {showToast("Please select date of birth");return false;}
+        if (gender.isEmpty()) {showToast("Please select gender");return false;}
+        if (email.isEmpty()) {showToast("Email cannot be empty");return false;}
+        if (!email.matches("[A-Za-z0-9+_.-]+@(.+)$")) {showToast("Invalid email format");return false;}
+        if (phone.isEmpty()) {showToast("Phone cannot be empty");return false;}
+        if (!phone.matches("^[0-9+]{9,15}$")) {showToast("Phone number is invalid (9-15 digits)");return false;}
+        return true;
+    }
+    private void saveStudent(Student student, String studentName, BottomSheetDialog dialog) {
+        if(student.getStudentId() == null){
+            showToast("Student ID not found");
+            return;
+        }
         firebaseHelper.addStudent(student, new OnOperationCompleteCallback() {
             @Override
             public void onSuccess() {
-                String studentClassesId = UUID.randomUUID().toString();
-                StudentClasses studentClasses = new StudentClasses(studentClassesId, student.getStudentId(), classId, Timestamp.now());
-                firebaseHelper.addStudentClass(studentClasses, new OnOperationCompleteCallback() {
-                    @Override
-                    public void onSuccess() {
-                        studentList.add(student);
-                        originalStudentList.add(student);
-                        studentAdapter.notifyDataSetChanged();
-                        binding.studentCount.setText(String.valueOf(studentList.size()));
-                        Toast.makeText(getContext(), "Student " + studentName + " added successfully", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        Log.e(TAG, "Error adding student class", e);
-                        Toast.makeText(getContext(), "Error adding student class", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                studentList.add(student);
+                originalStudentList.add(student);
+                studentAdapter.notifyDataSetChanged();
+                binding.studentCount.setText(String.valueOf(studentList.size()));
+                showToast("Student " + studentName + " added successfully");
+                dialog.dismiss();
             }
 
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "Error adding student", e);
-                Toast.makeText(getContext(), "Error adding student", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error adding student: " + e.getMessage(), e);
+                showToast("Error adding student");
             }
         });
     }
@@ -281,14 +264,14 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
                     studentAdapter.notifyDataSetChanged();
                     binding.studentCount.setText(String.valueOf(studentList.size()));
                     if (studentList.isEmpty()) {
-                        Toast.makeText(getContext(), "No students found", Toast.LENGTH_SHORT).show();
+                        showToast("No students found");
                     }
                 }
             }
 
             @Override
             public void onError(String errorMessage) {
-                Toast.makeText(getContext(), "Error loading students: " + errorMessage, Toast.LENGTH_SHORT).show();
+                showToast("Error loading students: " + errorMessage);
             }
         });
     }
@@ -296,10 +279,8 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
     private void filterStudent(String query) {
         List<Student> filteredList = new ArrayList<>();
         if (query == null || query.trim().isEmpty()) {
-            // Nếu query rỗng, khôi phục danh sách gốc
             filteredList.addAll(originalStudentList);
         } else {
-            // Lọc danh sách dựa trên query
             for (Student student : originalStudentList) {
                 if (student.getStudentName().toLowerCase().contains(query.toLowerCase()) ||
                         student.getStudentCode().toLowerCase().contains(query.toLowerCase())) {
@@ -309,16 +290,19 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         }
         studentAdapter.updateList(filteredList);
         binding.studentCount.setText(String.valueOf(filteredList.size()));
-
     }
 
     @Override
     public void onEdit(Student student) {
+        if (userId == null) {
+            showToast("User ID not found");
+            return;
+        }
         Bundle bundle = new Bundle();
         bundle.putString("student_id", student.getStudentId());
-        bundle.putString("user_id", userId); // Đảm bảo userId cũng được truyền
+        bundle.putString("user_id", userId);
         NavController navController = NavHostFragment.findNavController(this);
-        android.util.Log.d("StudentFragment", "Navigating with student_id: " + student.getStudentId());
+        Log.d(TAG, "Navigating to StudentProfileFragment with student_id: " + student.getStudentId());
         navController.navigate(R.id.action_studentFragment_to_studentProfileFragment, bundle);
     }
 
@@ -328,61 +312,55 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         firebaseHelper.deleteStudent(student.getStudentId(), new OnOperationCompleteCallback() {
             @Override
             public void onSuccess() {
-                if(getActivity() != null){
+                if (getActivity() != null) {
                     studentList.remove(student);
                     originalStudentList.remove(student);
                     studentAdapter.notifyDataSetChanged();
                     binding.studentCount.setText(String.valueOf(studentList.size()));
-                    Toast.makeText(getContext(), "Student deleted successfully", Toast.LENGTH_SHORT).show();
+                    showToast("Student deleted successfully");
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "Error deleting student", e);
-                Toast.makeText(getContext(), "Error deleting student", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error deleting student: " + e.getMessage(), e);
+                showToast("Error deleting student");
             }
         });
     }
 
     private void setupMenuBar() {
-        NavController navController = NavHostFragment.findNavController(this);
-
-        binding.menuClasses.setOnClickListener(v -> {
-            if (userId == null) {
-                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            } else {
-                navigateToHomeFragment(userId);
-            }
-        });
-
-        binding.menuReports.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Reports clicked", Toast.LENGTH_SHORT).show();
-        });
-
-        binding.menuSettings.setOnClickListener(v -> {
-            if (userId == null) {
-                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            } else {
-                navigateToSettingFragment(userId);
-            }
-        });
+        binding.menuClasses.setOnClickListener(v -> navigateToHomeFragment());
+        binding.menuReports.setOnClickListener(v -> navigateToReportFragment());
+        binding.menuSettings.setOnClickListener(v -> navigateToSettingFragment());
     }
 
-    private void navigateToHomeFragment(String userId) {
+    private void navigateToHomeFragment() {
+        navigateTo(R.id.action_studentFragment_to_homeFragment);
+    }
+    private void navigateToReportFragment() {
+        navigateTo(R.id.action_studentFragment_to_alertFragment);
+    }
+    private void navigateToSettingFragment() {
+        navigateTo(R.id.action_studentFragment_to_settingFragment);
+    }
+
+    private void navigateTo(int actionId){
+        if(userId == null){
+            showToast("User ID not found");
+            return;
+        }
         Bundle bundle = new Bundle();
         bundle.putString("user_id", userId);
         NavController navController = NavHostFragment.findNavController(this);
-        navController.navigate(R.id.action_studentFragment_to_homeFragment, bundle);
-        Log.d(TAG, "Navigating to HomeFragment with userId: " + userId);
+        navController.navigate(actionId, bundle);
+        Log.d(TAG, "Navigating to actionId: " + actionId + " with userId: " + userId);
     }
 
-    private void navigateToSettingFragment(String userId) {
-        Bundle bundle = new Bundle();
-        bundle.putString("user_id", userId);
-        NavController navController = NavHostFragment.findNavController(this);
-        navController.navigate(R.id.action_studentFragment_to_settingFragment, bundle);
-        Log.d(TAG, "Navigating to SettingFragment with userId: " + userId);
+    private void showToast(String message){
+        if (getActivity() != null) {
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override

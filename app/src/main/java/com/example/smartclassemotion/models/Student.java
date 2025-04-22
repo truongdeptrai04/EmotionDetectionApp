@@ -7,6 +7,9 @@ public class Student {
     @PropertyName("studentId")
     private String studentId;
 
+    @PropertyName("userId")
+    private String userId;
+
     @PropertyName("studentCode")
     private String studentCode;
 
@@ -37,9 +40,10 @@ public class Student {
     public Student() {
     }
 
-    public Student(String studentId, String studentCode, String studentName, Timestamp dateOfBirth,
+    public Student(String studentId,String userId, String studentCode, String studentName, Timestamp dateOfBirth,
                    String gender, String email, String phone, String avatarUrl, String note) {
         this.studentId = studentId;
+        this.userId = userId;
         this.studentCode = studentCode;
         this.studentName = studentName;
         this.dateOfBirth = dateOfBirth;
@@ -95,4 +99,12 @@ public class Student {
     public String getAvatarUrl() {return avatarUrl;}
     @PropertyName("avatarUrl")
     public void setAvatarUrl(String avatarUrl) {this.avatarUrl = avatarUrl;}
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 }

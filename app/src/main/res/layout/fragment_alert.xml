@@ -3,18 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".view.StudentFragment"
+    tools:context=".view.AlertFragment"
     android:orientation="vertical"
     android:background="#161B58">
 
     <!-- Header -->
     <TextView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="#161B58"
+        android:layout_height="80dp"
         android:fontFamily="@font/agbalumo"
         android:textSize="26sp"
-        android:layout_marginTop="20sp"
+        android:layout_marginTop="10dp"
         android:layout_marginStart="15dp"
         android:text="Real Time \n Alerts"
         android:textColor="#E792A4" />
@@ -26,33 +25,16 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="20sp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/rounded_top_white_background"
         android:orientation="vertical">
 
-        <androidx.appcompat.widget.SearchView
-            android:id="@+id/student_search"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:queryHint="Search Students..."/>
-
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/student_recycle_view"
+            android:id="@+id/recyclerViewAlerts"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:padding="8dp" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/add_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end|bottom"
-            android:layout_margin="16dp"
-            android:backgroundTint="#E792A4"
-            android:contentDescription="Add student"
-            android:src="@drawable/baseline_add_24_black"/>
     </LinearLayout>
 
     <!-- Menu bar dưới cùng -->
@@ -84,7 +66,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Reports"
+            android:text="Alerts"
             android:textColor="@color/white"
             android:textSize="16sp"
             android:drawableTop="@drawable/ic_reports"

@@ -3,6 +3,7 @@ package com.example.smartclassemotion.database;
 import android.net.Uri;
 import android.util.Log;
 
+import com.example.smartclassemotion.models.Alert;
 import com.example.smartclassemotion.models.ClassItem;
 import com.example.smartclassemotion.models.Student;
 import com.example.smartclassemotion.models.StudentClasses;
@@ -10,13 +11,20 @@ import com.example.smartclassemotion.utils.ClassListCallback;
 import com.example.smartclassemotion.utils.EmotionStatsCallback;
 import com.example.smartclassemotion.utils.FirebaseCallback;
 import com.example.smartclassemotion.utils.OnImageUploadedCallback;
+import com.example.smartclassemotion.utils.OnMaxClassIdCallback;
+import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentCountCallback;
 import com.example.smartclassemotion.utils.StudentEmotionStatsCallback;
 import com.example.smartclassemotion.utils.StudentListCallback;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
@@ -59,7 +67,7 @@ public class FirebaseHelper {
                         userData.put("email", email);
                         userData.put("role", "teacher");
 
-                        db.collection("Users").document(userId).set(userData)
+                        db.collection("User").document(userId).set(userData)
                                 .addOnSuccessListener(aVoid -> callback.onSuccess(true, userId))
                                 .addOnFailureListener(e -> {
                                     android.util.Log.e("FirebaseHelper", "Failed to save user data: " + e.getMessage());
@@ -93,58 +101,21 @@ public class FirebaseHelper {
     }
 
     public void getAllStudentsByUserId(String userId, StudentListCallback callback) {
-        db.collection("Classes")
+        db.collection("Students")
                 .whereEqualTo("userId", userId)
+                .orderBy("studentName", Query.Direction.ASCENDING)
                 .get()
-                .addOnSuccessListener(classSnapshot -> {
-                    List<String> classIds = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : classSnapshot) {
-                        classIds.add(doc.getId());
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Student> students = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        Student student = doc.toObject(Student.class);
+                        students.add(student);
                     }
-                    if (classIds.isEmpty()) {
-                        android.util.Log.d("FirebaseHelper", "No classes found for user: " + userId);
-                        callback.onStudentsLoaded(new ArrayList<>());
-                        return;
-                    }
-
-                    db.collection("StudentClasses")
-                            .whereIn("classId", classIds)
-                            .get()
-                            .addOnSuccessListener(studentClassesSnapshot -> {
-                                List<String> studentIds = new ArrayList<>();
-                                for (QueryDocumentSnapshot doc : studentClassesSnapshot) {
-                                    String studentId = doc.getString("studentId");
-                                    if (studentId != null) {
-                                        studentIds.add(studentId);
-                                    }
-                                }
-                                if (studentIds.isEmpty()) {
-                                    android.util.Log.d("FirebaseHelper", "No students found for classes: " + classIds);
-                                    callback.onStudentsLoaded(new ArrayList<>());
-                                    return;
-                                }
-
-                                db.collection("Students")
-                                        .whereIn("studentId", studentIds)
-                                        .orderBy("studentName")
-                                        .get()
-                                        .addOnSuccessListener(studentSnapshot -> {
-                                            List<Student> students = studentSnapshot.toObjects(Student.class);
-                                            android.util.Log.d("FirebaseHelper", "Students loaded: " + students.size() + " for userId: " + userId);
-                                            callback.onStudentsLoaded(students);
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            android.util.Log.e("FirebaseHelper", "Failed to load students: " + e.getMessage());
-                                            callback.onStudentsLoaded(new ArrayList<>());
-                                        });
-                            })
-                            .addOnFailureListener(e -> {
-                                android.util.Log.e("FirebaseHelper", "Failed to load student classes: " + e.getMessage());
-                                callback.onStudentsLoaded(new ArrayList<>());
-                            });
+                    Log.d(TAG, "Students loaded: " + students.size() + " for userId: " + userId);
+                    callback.onStudentsLoaded(students);
                 })
                 .addOnFailureListener(e -> {
-                    android.util.Log.e("FirebaseHelper", "Failed to load classes: " + e.getMessage());
+                    android.util.Log.e("FirebaseHelper", "Failed to load students: " + e.getMessage());
                     callback.onStudentsLoaded(new ArrayList<>());
                 });
     }
@@ -375,5 +346,92 @@ public class FirebaseHelper {
                     Log.e("FirebaseHelper", "Failed to upload image: " + e.getMessage());
                     callback.onError(e);
                 });
+    }
+
+    public void getMaxClassId(String userId, OnMaxClassIdCallback callback){
+        db.collection("Classes")
+                .whereEqualTo("userId", userId)
+                .orderBy("classId", Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if(queryDocumentSnapshots.isEmpty()){
+                        callback.onMaxClassIdFount(0);
+                    }else{
+                        String maxClassId = queryDocumentSnapshots.getDocuments().get(0).getString("classId");
+                        if(maxClassId != null && maxClassId.matches("cl_\\d{3}")){
+                            int maxNumber = Integer.parseInt(maxClassId.substring(3));
+                            callback.onMaxClassIdFount(maxNumber);
+                        }else{
+                            callback.onMaxClassIdFount(0);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to get max class ID: " + e.getMessage());
+                    callback.onError(e);
+                });
+    }
+    public void getMaxStudentId(String userId, OnMaxStudentIdCallback callback) {
+        db.collection("Students")
+                .whereEqualTo("userId", userId)
+                .orderBy("studentId", Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        callback.onMaxStudentIdFound(0);
+                    } else {
+                        String maxStudentId = queryDocumentSnapshots.getDocuments().get(0).getString("studentId");
+                        if (maxStudentId != null && maxStudentId.matches("std_\\d{3}")) {
+                            int maxNumber = Integer.parseInt(maxStudentId.substring(4));
+                            callback.onMaxStudentIdFound(maxNumber);
+                        } else {
+                            callback.onMaxStudentIdFound(0);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to get max student ID: " + e.getMessage());
+                    callback.onError(e);
+                });
+    }
+
+    public void addClass(Map<String, Object> classData, String baseClassId, int startNumber, OnOperationCompleteCallback callback) {
+        int attemptNumber = startNumber;
+        String classId = String.format("cl_%03d", attemptNumber);
+
+        DocumentReference classRef = db.collection("Classes").document(classId);
+        db.runTransaction(transaction -> {
+                    DocumentSnapshot snapshot = transaction.get(classRef);
+                    if (snapshot.exists()) {
+                        // Nếu classId đã tồn tại, ném lỗi để thử số tiếp theo
+                        throw new FirebaseFirestoreException("Class ID đã tồn tại",
+                                FirebaseFirestoreException.Code.ABORTED);
+                    }
+                    classData.put("classId", classId); // Đảm bảo classId được lưu
+                    transaction.set(classRef, classData);
+                    return classId;
+                })
+                .addOnSuccessListener(result -> {
+                    Log.d("FirebaseHelper", "Thêm lớp thành công: " + classId);
+                    callback.onSuccess();
+                })
+                .addOnFailureListener(e -> {
+                    if (e.getMessage().equals("Class ID đã tồn tại")) {
+                        // Thử classId tiếp theo
+                        addClass(classData, baseClassId, attemptNumber + 1, callback);
+                    } else {
+                        Log.e("FirebaseHelper", "Lỗi khi thêm lớp: " + e.getMessage());
+                        callback.onFailure(e);
+                    }
+                });
+    }
+    public void addAlert(String title, String content, String classId, OnSuccessListener<Void> successListener, OnFailureListener failureListener) {
+        Alert alert = new Alert(title, content, Timestamp.now(), classId);
+        db.collection("Alerts")
+                .add(alert)
+                .addOnSuccessListener(documentReference -> successListener.onSuccess(null))
+                .addOnFailureListener(failureListener);
     }
 }

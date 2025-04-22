@@ -1,7 +1,5 @@
 package com.example.smartclassemotion.view;
 
-import static android.content.ContentValues.TAG;
-
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -9,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,7 +40,8 @@ public class StudentProfileFragment extends Fragment {
     private boolean isEditMode = false;
     private List<String> className;
     private List<String> classIds;
-    private ArrayAdapter<String> spinnerAdapter;
+    private ArrayAdapter<String> classSpinnerAdapter;
+    private boolean isInitiaLoad = true;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -51,70 +51,55 @@ public class StudentProfileFragment extends Fragment {
         firebaseHelper = new FirebaseHelper();
         className = new ArrayList<>();
         classIds = new ArrayList<>();
-        className.add("All Classes");
-        classIds.add("");
 
-        // Nhận studentId và userId từ Bundle
+        initializeArgument();
+        if (studentId == null || userId == null) {
+            Log.e(TAG, "Student ID or User ID is null");
+            showToast("Student ID or User ID is null");
+            return root;
+        }
+
+        setupStatusSpinner();
+        setupClassSpinner();
+        setupNavigation();
+        setupEditMode();
+        loadStudentData();
+        return root;
+    }
+
+    private void initializeArgument() {
         if (getArguments() != null) {
             studentId = getArguments().getString("student_id");
             userId = getArguments().getString("user_id");
             Log.d(TAG, "Received student_id: " + studentId + ", user_id: " + userId);
         }
+    }
 
-        if (studentId == null) {
-            Log.e(TAG, "Student ID is null");
-            Toast.makeText(getContext(), "Student ID not found", Toast.LENGTH_SHORT).show();
-            return root;
-        }
-
-        binding.tvNamestudent.setText("Loading...");
-        binding.tvMood.setText("Loading...");
-        binding.tvGender.setText("Loading...");
-        binding.tvPhone.setText("Loading...");
-        binding.tvEmail.setText("Loading...");
-        binding.edtNote.setText("");
-
-        ArrayAdapter<String> statusAdapter = new ArrayAdapter<String>(requireContext(), android.R.layout.simple_spinner_item, getResources().getStringArray(R.array.status_list)){
+    private void setupStatusSpinner() {
+        ArrayAdapter<String> statusAdapter = new ArrayAdapter<String>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.status_list)
+        ) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
-                TextView textView = (TextView)view;
-                if (position == 0) {
-                    textView.setTextColor(0xFF000000);
-                } else {
-                    textView.setTextColor(0xFFFF0000);
-                }
+                TextView textView = (TextView) view;
+                textView.setTextColor(position == 0 ? 0xFF000000 : 0xFFFF0000);
                 return view;
             }
+
             @Override
             public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 View view = super.getDropDownView(position, convertView, parent);
                 TextView textView = (TextView) view;
-                if (position == 0) {
-                    textView.setTextColor(0xFF000000); // Màu đen
-                } else {
-                    textView.setTextColor(0xFFFF0000); // Màu đỏ
-                }
+                textView.setTextColor(position == 0 ? 0xFF000000 : 0xFFFF0000);
                 return view;
             }
         };
-
         statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.statusSpinner.setAdapter(statusAdapter);
-
-        spinnerAdapter = new ArrayAdapter<>(
-                requireContext(),
-                android.R.layout.simple_spinner_item,
-                className
-        );
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        binding.spinnerClass.setAdapter(spinnerAdapter);
-
-        loadStudentData();
-        setupClassSpinner();
-        setupMenuBar();
-        setupEditMode();
-        return root;
+        binding.statusSpinner.setEnabled(false);
     }
 
     private void loadStudentData() {
@@ -126,101 +111,163 @@ public class StudentProfileFragment extends Fragment {
                         student = documentSnapshot.toObject(Student.class);
                         if (student != null) {
                             Log.d(TAG, "Student loaded: " + student.getStudentName() + ", data: " + documentSnapshot.getData());
-                            // Hiển thị thông tin học sinh
-                            binding.tvNamestudent.setText(student.getStudentName() != null ? student.getStudentName() : "N/A");
-                            binding.tvGender.setText(student.getGender() != null ? student.getGender() : "N/A");
-                            binding.tvPhone.setText(student.getPhone() != null ? student.getPhone() : "N/A");
-                            binding.tvEmail.setText(student.getEmail() != null ? student.getEmail() : "N/A");
-                            binding.edtNote.setText(student.getNotes() != null ? student.getNotes() : "");
-                            String status = student.getStatus() != null ? student.getStatus() : "Active";
-                            binding.statusSpinner.setSelection(status.equals("Active") ? 0 : 1);
-                            binding.statusSpinner.setEnabled(false);
-                            updateEmotionChart("");
+                            updateStudentUI();
                         } else {
                             Log.e(TAG, "Failed to parse student object from Firestore");
-                            Toast.makeText(getContext(), "Failed to parse student data", Toast.LENGTH_SHORT).show();
+                            showToast("Failed to load student data");
                             resetFields();
                         }
                     } else {
                         Log.e(TAG, "Student document does not exist for student_id: " + studentId);
-                        Toast.makeText(getContext(), "Student not found in database", Toast.LENGTH_SHORT).show();
+                        showToast("Student not found");
                         resetFields();
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load student data: " + e.getMessage(), e);
-                    Toast.makeText(getContext(), "Failed to load student: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    showToast("Failed to load student data: " + e.getMessage());
                     resetFields();
                 });
     }
 
+    private void updateStudentUI() {
+        binding.tvNamestudent.setText(getStringOrDefault(student.getStudentName(), "N/A"));
+        binding.edtNamestudent.setText(getStringOrDefault(student.getStudentName(), ""));
+        binding.tvGender.setText(getStringOrDefault(student.getGender(), "N/A"));
+        setSpinnerSelection(binding.spinnerGender, getResources().getStringArray(R.array.gender_options), student.getGender());
+        binding.tvPhone.setText(getStringOrDefault(student.getPhone(), "N/A"));
+        binding.edtPhone.setText(getStringOrDefault(student.getPhone(), ""));
+        binding.tvEmail.setText(getStringOrDefault(student.getEmail(), "N/A"));
+        binding.edtEmail.setText(getStringOrDefault(student.getEmail(), ""));
+        binding.edtNote.setText(getStringOrDefault(student.getNotes(), ""));
+        setSpinnerSelection(binding.statusSpinner, getResources().getStringArray(R.array.status_list), student.getStatus());
+        binding.statusSpinner.setEnabled(false);
+    }
+
     private void resetFields() {
         binding.tvNamestudent.setText("N/A");
-        binding.tvMood.setText("N/A");
+        binding.edtNamestudent.setText("");
         binding.tvGender.setText("N/A");
+        binding.spinnerGender.setSelection(0);
         binding.tvPhone.setText("N/A");
+        binding.edtPhone.setText("");
         binding.tvEmail.setText("N/A");
+        binding.edtEmail.setText("");
         binding.edtNote.setText("");
         binding.statusSpinner.setSelection(0);
     }
 
     private void setupClassSpinner() {
-        if (userId == null) {
-            Log.e(TAG, "User ID is null, cannot load classes");
-            Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Log.d(TAG, "Setting up class spinner for user_id: " + userId);
-        firebaseHelper.getDb().collection("Classes")
-                .whereEqualTo("userId", userId)
-                .orderBy("className")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    className.clear();
-                    classIds.clear();
-                    className.add("All Classes");
-                    classIds.add("");
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        String className1 = doc.getString("className");
-                        String classId = doc.getId();
-                        if (className != null && classId != null) {
-                            className.add(className1);
-                            classIds.add(classId);
-                        }
-                    }
-                    spinnerAdapter.notifyDataSetChanged();
-                    Log.d(TAG, "Class list loaded: " + className.size() + " classes");
-                    if(!classIds.isEmpty()){
-                        updateEmotionChart("");
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load classes: " + e.getMessage(), e);
-                    Toast.makeText(getContext(), "Failed to load classes: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-
+        classSpinnerAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                className
+        );
+        classSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.spinnerClass.setAdapter(classSpinnerAdapter);
         binding.spinnerClass.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if(isInitiaLoad){
+                    isInitiaLoad = false;
+                    Log.d(TAG, "Initial spinner selection ignored");
+                    return;
+                }
                 if (className.isEmpty()) {
-                    Log.w(TAG, "Spinner selected but className is empty");
+                    Log.e(TAG, "Class list is empty");
                     return;
                 }
                 String selectedClassId = classIds.get(position);
-                Log.d(TAG, "Spinner selected: " + selectedClassId);
+                Log.d(TAG, "Selected class: " + className.get(position) + ", classId: " + selectedClassId);
                 updateEmotionChart(selectedClassId);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                Log.d(TAG, "Spinner nothing selected");
+                Log.d(TAG, "No class selected");
             }
         });
+        loadClasses();
+    }
+
+    private void loadClasses() {
+        if (userId == null) {
+            Log.e(TAG, "User ID is null, cannot load classes");
+            showToast("User ID not found");
+            return;
+        }
+        firebaseHelper.getDb().collection("StudentClasses")
+                .whereEqualTo("studentId", studentId)
+                .get()
+                .addOnSuccessListener(studentClassesSnapshot -> {
+                    className.clear();
+                    classIds.clear();
+
+                    List<String> classIdList = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : studentClassesSnapshot) {
+                        String classId = doc.getString("classId");
+                        if (classId != null) {
+                            classIdList.add(classId);
+                        }
+                    }
+
+                    if (classIdList.isEmpty()) {
+                        Log.w(TAG, "No classes found for student_id: " + studentId);
+                        showToast("No classes found for this student");
+                        classSpinnerAdapter.notifyDataSetChanged();
+                        binding.chartEmotion.clearChart();
+                        binding.chartEmotion.addPieSlice(new PieModel("No Classes", 100, 0xFF9E9E9E));
+                        binding.chartEmotion.startAnimation();
+                        return;
+                    }
+
+                    // Truy vấn Classes để lấy className dựa trên classId
+                    firebaseHelper.getDb().collection("Classes")
+                            .whereIn("classId", classIdList)
+                            .orderBy("className")
+                            .get()
+                            .addOnSuccessListener(classesSnapshot -> {
+                                for (QueryDocumentSnapshot doc : classesSnapshot) {
+                                    String classNameItem = doc.getString("className");
+                                    String classId = doc.getString("classId");
+                                    if (classNameItem != null && classId != null) {
+                                        className.add(classNameItem);
+                                        classIds.add(classId);
+                                    }
+                                }
+                                classSpinnerAdapter.notifyDataSetChanged();
+                                Log.d(TAG, "Class list loaded: " + className.size() + " classes for student_id: " + studentId);
+                                if (!className.isEmpty()) {
+                                    binding.spinnerClass.setSelection(0); // Chọn lớp đầu tiên
+                                    updateEmotionChart(classIds.get(0)); // Cập nhật biểu đồ cho lớp đầu tiên
+                                } else {
+                                    Log.w(TAG, "No matching classes found in Classes collection");
+                                    showToast("No matching classes found");
+                                    binding.chartEmotion.clearChart();
+                                    binding.chartEmotion.addPieSlice(new PieModel("No Classes", 100, 0xFF9E9E9E));
+                                    binding.chartEmotion.startAnimation();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Failed to load classes: " + e.getMessage(), e);
+                                showToast("Failed to load classes: " + e.getMessage());
+                                binding.chartEmotion.clearChart();
+                                binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
+                                binding.chartEmotion.startAnimation();
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load student classes: " + e.getMessage(), e);
+                    showToast("Failed to load student classes: " + e.getMessage());
+                    binding.chartEmotion.clearChart();
+                    binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
+                    binding.chartEmotion.startAnimation();
+                });
     }
 
     private void updateEmotionChart(String classId) {
         binding.chartEmotion.clearChart();
-        if(studentId == null){
+        if (studentId == null) {
             Log.e(TAG, "Student ID is null, cannot update emotion chart");
             return;
         }
@@ -234,15 +281,16 @@ public class StudentProfileFragment extends Fragment {
         }
 
         query.get()
-                .addOnSuccessListener(querySnapshot ->{
-                    if(!querySnapshot.isEmpty()){
+                .addOnSuccessListener(querySnapshot -> {
+                    binding.chartEmotion.clearChart();
+                    if (!querySnapshot.isEmpty()) {
                         Map<String, Object> data = querySnapshot.getDocuments().get(0).getData();
-                        float happy = data.get("happy") != null ? ((Number) data.get("happy")).floatValue() : 0f;
-                        float sad = data.get("sad") != null ? ((Number) data.get("sad")).floatValue() : 0f;
-                        float neutral = data.get("neutral") != null ? ((Number) data.get("neutral")).floatValue() : 0f;
-                        float angry = data.get("angry") != null ? ((Number) data.get("angry")).floatValue() : 0f;
-                        float fear = data.get("fear") != null ? ((Number) data.get("fear")).floatValue() : 0f;
-                        float surprise = data.get("surprise") != null ? ((Number) data.get("surprise")).floatValue() : 0f;
+                        float happy = getFloatValue(data, "happy");
+                        float sad = getFloatValue(data, "sad");
+                        float neutral = getFloatValue(data, "neutral");
+                        float angry = getFloatValue(data, "angry");
+                        float fear = getFloatValue(data, "fear");
+                        float surprise = getFloatValue(data, "surprise");
 
                         if (happy > 0) binding.chartEmotion.addPieSlice(new PieModel("Happy", happy, 0xFF4CAF50));
                         if (neutral > 0) binding.chartEmotion.addPieSlice(new PieModel("Neutral", neutral, 0xFFFFC107));
@@ -251,7 +299,7 @@ public class StudentProfileFragment extends Fragment {
                         if (fear > 0) binding.chartEmotion.addPieSlice(new PieModel("Fear", fear, 0xFF9C27B0));
                         if (surprise > 0) binding.chartEmotion.addPieSlice(new PieModel("Surprise", surprise, 0xFF2196F3));
                         Log.d(TAG, "Emotion stats loaded: happy=" + happy + ", sad=" + sad + ", neutral=" + neutral + ", angry=" + angry + ", fear=" + fear + ", surprise=" + surprise);
-                    }else{
+                    } else {
                         Log.d(TAG, "No emotion stats found for student_id: " + studentId + ", class_id: " + classId);
                         binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
                     }
@@ -261,7 +309,7 @@ public class StudentProfileFragment extends Fragment {
                     Log.e(TAG, "Failed to load emotion stats: " + e.getMessage(), e);
                     binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
                     binding.chartEmotion.startAnimation();
-                    Toast.makeText(getContext(), "Failed to load emotion stats: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    showToast("Failed to load emotion stats: " + e.getMessage());
                 });
     }
 
@@ -279,20 +327,18 @@ public class StudentProfileFragment extends Fragment {
     private void toggleEditMode(boolean enable) {
         binding.edtNamestudent.setVisibility(enable ? View.VISIBLE : View.GONE);
         binding.tvNamestudent.setVisibility(enable ? View.GONE : View.VISIBLE);
-        binding.edtMood.setVisibility(enable ? View.VISIBLE : View.GONE);
-        binding.tvMood.setVisibility(enable ? View.GONE : View.VISIBLE);
-        binding.edtGender.setVisibility(enable ? View.VISIBLE : View.GONE);
+        binding.spinnerGender.setVisibility(enable ? View.VISIBLE : View.GONE);
         binding.tvGender.setVisibility(enable ? View.GONE : View.VISIBLE);
         binding.edtPhone.setVisibility(enable ? View.VISIBLE : View.GONE);
         binding.tvPhone.setVisibility(enable ? View.GONE : View.VISIBLE);
         binding.edtEmail.setVisibility(enable ? View.VISIBLE : View.GONE);
         binding.tvEmail.setVisibility(enable ? View.GONE : View.VISIBLE);
         binding.statusSpinner.setEnabled(enable);
+        binding.edtNote.setEnabled(enable);
 
         if (enable) {
             binding.edtNamestudent.setText(binding.tvNamestudent.getText());
-            binding.edtMood.setText(binding.tvMood.getText());
-            binding.edtGender.setText(binding.tvGender.getText());
+            setSpinnerSelection(binding.spinnerGender, getResources().getStringArray(R.array.gender_options), binding.tvGender.getText().toString());
             binding.edtPhone.setText(binding.tvPhone.getText());
             binding.edtEmail.setText(binding.tvEmail.getText());
             binding.btnSave.setImageResource(R.drawable.baseline_check_24_white);
@@ -303,26 +349,23 @@ public class StudentProfileFragment extends Fragment {
 
     private void saveStudentData() {
         if (student == null) {
-            Toast.makeText(getContext(), "No student data to save", Toast.LENGTH_SHORT).show();
+            showToast("Student data is null");
             return;
         }
 
         String name = binding.edtNamestudent.getText().toString().trim();
-        String mood = binding.edtMood.getText().toString().trim();
-        String gender = binding.edtGender.getText().toString().trim();
+        String gender = binding.spinnerGender.getSelectedItem() != null ? binding.spinnerGender.getSelectedItem().toString() : "";
         String phone = binding.edtPhone.getText().toString().trim();
         String email = binding.edtEmail.getText().toString().trim();
         String notes = binding.edtNote.getText().toString().trim();
         String status = binding.statusSpinner.getSelectedItem() != null ? binding.statusSpinner.getSelectedItem().toString() : "Active";
 
-        if (name.isEmpty()) {
-            Toast.makeText(getContext(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+        if (!validateInput(name, gender, phone, email)) {
             return;
         }
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("studentName", name);
-        updates.put("mood", mood);
         updates.put("gender", gender);
         updates.put("phone", phone);
         updates.put("email", email);
@@ -333,72 +376,80 @@ public class StudentProfileFragment extends Fragment {
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Student updated: " + name);
-                    Toast.makeText(getContext(), "Student updated successfully", Toast.LENGTH_SHORT).show();
+                    showToast("Student updated successfully");
                     isEditMode = false;
                     toggleEditMode(false);
                     binding.tvNamestudent.setText(name);
-                    binding.tvMood.setText(mood);
                     binding.tvGender.setText(gender);
                     binding.tvPhone.setText(phone);
                     binding.tvEmail.setText(email);
-                    binding.statusSpinner.setSelection(status.equals("Active") ? 0 : 1);
+                    setSpinnerSelection(binding.statusSpinner, getResources().getStringArray(R.array.status_list), status);
                     binding.statusSpinner.setEnabled(false);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to update student: " + e.getMessage(), e);
-                    Toast.makeText(getContext(), "Failed to update student: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    showToast("Failed to update student: " + e.getMessage());
                 });
     }
 
-    private void setupMenuBar() {
-        NavController navController = NavHostFragment.findNavController(this);
-        binding.menuClasses.setOnClickListener(v -> {
-            if(userId == null) {
-                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            }else{
-                navigateToHomeFragment(userId);
-            }
-        });
+    private void setupNavigation() {
+        binding.menuClasses.setOnClickListener(v -> navigateTo(R.id.action_studentProfileFragment_to_homeFragment));
+        binding.menuReports.setOnClickListener(v -> navigateTo(R.id.action_studentProfileFragment_to_alertFragment));
+        binding.menuStudents.setOnClickListener(v -> navigateTo(R.id.action_studentProfileFragment_to_studentFragment));
+        binding.menuSettings.setOnClickListener(v -> navigateTo(R.id.action_studentProfileFragment_to_settingFragment));
+    }
 
-        binding.menuReports.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Reports clicked", Toast.LENGTH_SHORT).show();
-        });
+    private void navigateTo(int actionId) {
+        if (userId == null) {
+            showToast("User ID not found");
+            return;
+        }
+        Bundle bundle = new Bundle();
+        bundle.putString("user_id", userId);
+        NavController navController = NavHostFragment.findNavController(this);
+        navController.navigate(actionId, bundle);
+        Log.d(TAG, "Navigating to Action " + actionId + " with userId: " + userId);
+    }
 
-        binding.menuStudent.setOnClickListener(v -> {
-            if(userId == null) {
-                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            }else{
-                navigateToStudentFragment(userId);
+    private boolean validateInput(String name, String gender, String phone, String email) {
+        if (name.isEmpty()) {
+            showToast("Name cannot be empty");
+            return false;
+        }
+        if (gender.isEmpty()) {
+            showToast("Gender cannot be empty");
+            return false;
+        }
+        if (!phone.isEmpty() && !phone.matches("^[0-9+]{9,15}$")) {
+            showToast("Phone number is invalid (10 - 15 digits)");
+            return false;
+        }
+        if (!email.isEmpty() && !email.matches("[A-ZA-z0-9+_.-]+@(.+)$")) {
+            showToast("Invalid email format");
+            return false;
+        }
+        return true;
+    }
+
+    private String getStringOrDefault(String value, String defaultValue) {
+        return value != null ? value : defaultValue;
+    }
+
+    private float getFloatValue(Map<String, Object> data, String key) {
+        return data.get(key) != null ? ((Number) data.get(key)).floatValue() : 0f;
+    }
+
+    private void setSpinnerSelection(Spinner spinner, String[] items, String value) {
+        for (int i = 0; i < items.length; i++) {
+            if (items[i].equals(value)) {
+                spinner.setSelection(i);
+                break;
             }
-        });
-        binding.menuSettings.setOnClickListener(v -> {
-            if(userId == null) {
-                Toast.makeText(getContext(), "User ID not found", Toast.LENGTH_SHORT).show();
-            }else{
-                navigateToSettingFragment(userId);
-            }
-        });
+        }
     }
-    private void navigateToHomeFragment(String userId){
-        Bundle bundle = new Bundle();
-        bundle.putString("user_id", userId);
-        NavController navController = NavHostFragment.findNavController(this);
-        navController.navigate(R.id.action_studentProfileFragment_to_homeFragment, bundle);
-        Log.d(TAG, "Navigating to HomeFragment with userId: " + userId);
-    }
-    private void navigateToStudentFragment(String userId) {
-        Bundle bundle = new Bundle();
-        bundle.putString("user_id", userId);
-        NavController navController = NavHostFragment.findNavController(this);
-        navController.navigate(R.id.action_studentProfileFragment_to_studentFragment, bundle);
-        Log.d(TAG, "Navigating to StudentFragment with userId: " + userId);
-    }
-    private void navigateToSettingFragment(String userId) {
-        Bundle bundle = new Bundle();
-        bundle.putString("user_id", userId);
-        NavController navController = NavHostFragment.findNavController(this);
-        navController.navigate(R.id.action_studentProfileFragment_to_settingFragment, bundle);
-        Log.d(TAG, "Navigating to SettingFragment with userId: " + userId);
+
+    private void showToast(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
     }
 
     @Override

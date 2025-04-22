@@ -1,6 +1,7 @@
 package com.example.smartclassemotion.viewmodel;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -65,7 +66,20 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
                     0xFF4CAF50 : 0xFFFF0000); // Xanh cho Active, đỏ cho Inactive
 
             binding.editStudentBtn.setOnClickListener(v -> listener.onEdit(student));
-            binding.deleteStudentBtn.setOnClickListener(v -> listener.onDelete(student));
+            binding.deleteStudentBtn.setOnClickListener(v -> {
+                new AlertDialog.Builder(binding.getRoot().getContext())
+                        .setTitle("Confirm Delete")
+                        .setMessage("Are you sure you want to delete " + student.getStudentName() + "?")
+                        .setIcon(R.drawable.ic_dialog_alert)
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            listener.onDelete(student);
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            dialog.dismiss();
+                        })
+                        .setCancelable(true)
+                        .show();
+            });
         }
     }
 }

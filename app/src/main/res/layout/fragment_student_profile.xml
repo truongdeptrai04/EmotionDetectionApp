@@ -10,15 +10,15 @@
     <!-- Header -->
     <TextView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="62dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
         android:fontFamily="@font/agbalumo"
         android:text="Student Profile"
         android:textColor="#E792A4"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:textSize="26sp" />
 
     <!-- Profile Content -->
     <androidx.core.widget.NestedScrollView
@@ -60,25 +60,30 @@
                     <TextView
                         android:id="@+id/tv_namestudent"
                         android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:text="Sarah Chen"
+                        android:singleLine="true"
+                        android:ellipsize="end"
                         android:textColor="#212121"
                         android:textSize="20sp"
                         android:textStyle="bold" />
+
                     <Spinner
                         android:id="@+id/status_spinner"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:entries="@array/status_list"
-                        android:prompt="@string/select_status"
-                        android:spinnerMode="dropdown"/>
+                        android:spinnerMode="dropdown" />
+
                     <EditText
                         android:id="@+id/edt_namestudent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:hint="Enter name"
+                        android:singleLine="true"
+                        android:ellipsize="end"
                         android:visibility="gone"
                         android:textSize="16sp" />
                 </LinearLayout>
@@ -97,42 +102,6 @@
                     android:orientation="horizontal"
                     android:padding="8dp">
 
-                    <!-- Mood -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="16dp"
-                        android:background="@drawable/info_card_background"
-                        android:padding="12dp"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tv_mood_label"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Mood"
-                            android:textColor="#757575"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/tv_mood"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="Happy"
-                            android:textColor="#D81B60"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <EditText
-                            android:id="@+id/edt_mood"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:hint="Enter mood"
-                            android:visibility="gone"
-                            android:textSize="16sp" />
-                    </LinearLayout>
 
                     <!-- Gender -->
                     <LinearLayout
@@ -157,18 +126,20 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Female"
+                            android:singleLine="true"
+                            android:ellipsize="end"
                             android:textColor="#212121"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
-                        <EditText
-                            android:id="@+id/edt_gender"
-                            android:layout_width="match_parent"
+                        <Spinner
+                            android:id="@+id/spinner_gender"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:hint="Enter gender"
-                            android:visibility="gone"
-                            android:textSize="16sp" />
+                            android:entries="@array/gender_options"
+                            android:spinnerMode="dropdown"
+                            android:visibility="gone" />
                     </LinearLayout>
 
                     <!-- Phone -->
@@ -194,17 +165,21 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="+84 123 456 789"
+                            android:singleLine="true"
+                            android:ellipsize="end"
                             android:textColor="#212121"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <EditText
                             android:id="@+id/edt_phone"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:hint="Enter phone"
                             android:inputType="phone"
+                            android:singleLine="true"
+                            android:ellipsize="end"
                             android:visibility="gone"
                             android:textSize="16sp" />
                     </LinearLayout>
@@ -231,17 +206,21 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="sarah@example.com"
+                            android:singleLine="true"
+                            android:ellipsize="end"
                             android:textColor="#212121"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <EditText
                             android:id="@+id/edt_email"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:hint="Enter email"
                             android:inputType="textEmailAddress"
+                            android:singleLine="true"
+                            android:ellipsize="end"
                             android:visibility="gone"
                             android:textSize="16sp" />
                     </LinearLayout>
@@ -273,7 +252,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="@drawable/spinner_background"
-                    android:entries="@array/class_list"
                     android:padding="8dp" />
             </LinearLayout>
 
@@ -307,6 +285,7 @@
                 android:background="@drawable/edit_text_background"
                 android:hint="Enter teacher notes..."
                 android:minLines="4"
+                android:enabled="false"
                 android:padding="12dp"
                 android:textSize="16sp" />
 
@@ -327,68 +306,65 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#E792A4"
+        android:background="#d17386"
+        android:gravity="center"
         android:orientation="horizontal"
-        android:padding="12dp">
+        android:padding="8dp">
 
         <TextView
             android:id="@+id/menu_classes"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:clickable="true"
             android:drawableTop="@drawable/ic_home"
-            android:drawablePadding="8dp"
+            android:drawablePadding="4dp"
+            android:focusable="true"
             android:gravity="center"
-            android:background="?android:attr/selectableItemBackground"
             android:text="Classes"
             android:textColor="@color/white"
-            android:textSize="14sp"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/menu_reports"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_reports"
-            android:drawablePadding="8dp"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground"
-            android:text="Reports"
-            android:textColor="@color/white"
-            android:textSize="14sp"
             android:clickable="true"
-            android:focusable="true" />
+            android:drawableTop="@drawable/ic_reports"
+            android:drawablePadding="4dp"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="Alerts"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/menu_student"
+            android:id="@+id/menu_students"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:clickable="true"
             android:drawableTop="@drawable/ic_student"
-            android:drawablePadding="8dp"
+            android:drawablePadding="4dp"
+            android:focusable="true"
             android:gravity="center"
-            android:background="?android:attr/selectableItemBackground"
             android:text="Student"
             android:textColor="@color/white"
-            android:textSize="14sp"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/menu_settings"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:clickable="true"
             android:drawableTop="@drawable/ic_settings"
-            android:drawablePadding="8dp"
+            android:drawablePadding="4dp"
+            android:focusable="true"
             android:gravity="center"
-            android:background="?android:attr/selectableItemBackground"
             android:text="Settings"
             android:textColor="@color/white"
-            android:textSize="14sp"
-            android:clickable="true"
-            android:focusable="true" />
+            android:textSize="16sp" />
     </LinearLayout>
 </LinearLayout>

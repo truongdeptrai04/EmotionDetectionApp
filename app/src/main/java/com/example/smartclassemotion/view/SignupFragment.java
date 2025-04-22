@@ -33,8 +33,6 @@ public class SignupFragment extends Fragment {
         binding = FragmentSignupBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
         firebaseHelper = new FirebaseHelper();
-
-
         binding.loginBtn1.setOnClickListener(view -> navigateToLoginFragment());
         binding.loginBtn2.setOnClickListener(view -> navigateToLoginFragment());
         binding.signupBtn.setOnClickListener(view -> validateAndSignup());
