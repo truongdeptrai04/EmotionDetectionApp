@@ -1,4 +1,5 @@
 package com.example.smartclassemotion.viewmodel;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Build;
@@ -51,14 +52,13 @@ public class AlertAdapter extends RecyclerView.Adapter<AlertAdapter.AlertViewHol
         diffResult.dispatchUpdatesTo(this);
     }
 
-    private void deleteAlert(Alert alert, int position) {
+    private void deleteAlert(Alert alert) {
         FirebaseFirestore.getInstance().collection("Alerts")
                 .document(alert.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    List<Alert> updatedList = new ArrayList<>(alertList);
-                    updatedList.remove(position);
-                    updateAlerts(updatedList);
+                    // Không cần cập nhật thủ công, snapshot listener sẽ xử lý
+                    Toast.makeText(context, "Thông báo đã được xóa", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> Toast.makeText(
                         context,
@@ -79,7 +79,6 @@ public class AlertAdapter extends RecyclerView.Adapter<AlertAdapter.AlertViewHol
             binding.alertContent.setText(String.format("%s: %s", alert.getTitle(), alert.getContent()));
             binding.alertTime.setText(getRelativeTime(alert.getTimestampInMillis()));
 
-            // Set màu nền theo title
             int backgroundColor;
             switch (alert.getTitle()) {
                 case "Critical":
@@ -94,9 +93,7 @@ public class AlertAdapter extends RecyclerView.Adapter<AlertAdapter.AlertViewHol
             }
             binding.cardView.setCardBackgroundColor(backgroundColor);
 
-            // Xử lý nút xóa
             binding.deleteBtn.setOnClickListener(v -> {
-                // Haptic Feedback
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
                 } else {
@@ -106,7 +103,7 @@ public class AlertAdapter extends RecyclerView.Adapter<AlertAdapter.AlertViewHol
                 new AlertDialog.Builder(context)
                         .setTitle("Xác nhận xóa")
                         .setMessage("Bạn có chắc muốn xóa thông báo này?")
-                        .setPositiveButton("Có", (dialog, which) -> deleteAlert(alert, getAdapterPosition()))
+                        .setPositiveButton("Có", (dialog, which) -> deleteAlert(alert))
                         .setNegativeButton("Không", null)
                         .setIcon(android.R.drawable.ic_dialog_alert)
                         .show();

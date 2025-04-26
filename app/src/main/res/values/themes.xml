@@ -11,4 +11,8 @@
         <item name="colorSwitchThumbNormal">#FFFFFF</item>
         <item name="android:foreground">#99FFFFFF</item>
     </style>
+    <style name="TransparentDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
 </resources>

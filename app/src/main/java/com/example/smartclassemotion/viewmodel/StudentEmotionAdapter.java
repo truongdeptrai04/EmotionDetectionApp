@@ -1,6 +1,7 @@
 package com.example.smartclassemotion.viewmodel;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -10,12 +11,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.smartclassemotion.databinding.ItemStudentEmotionBinding;
 import com.example.smartclassemotion.models.Student;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAdapter.StudentEmotionViewHolder> {
-    private List<Student> studentList;
-    private List<Map<String, Float>> emotionStatsList;
+    private static final String TAG = "StudentEmotionAdapter";
+    private final List<Student> studentList;
+    private final List<Map<String, Float>> emotionStatsList;
 
     public StudentEmotionAdapter(List<Student> studentList, List<Map<String, Float>> emotionStatsList) {
         this.studentList = studentList;
@@ -25,14 +28,20 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
     @NonNull
     @Override
     public StudentEmotionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemStudentEmotionBinding binding = ItemStudentEmotionBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        ItemStudentEmotionBinding binding = ItemStudentEmotionBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
         return new StudentEmotionViewHolder(binding);
     }
 
     @Override
     public void onBindViewHolder(@NonNull StudentEmotionViewHolder holder, int position) {
         Student student = studentList.get(position);
-        Map<String, Float> emotionStats = emotionStatsList.get(position);
+        // Kiểm tra kích thước emotionStatsList
+        Map<String, Float> emotionStats = position < emotionStatsList.size() ? emotionStatsList.get(position) : null;
+        if (emotionStats == null) {
+            Log.w(TAG, "No emotion stats for student at position: " + position + ", student: " + student.getStudentName());
+            emotionStats = new HashMap<>(); // Tạo HashMap rỗng để tránh lỗi
+        }
         holder.bind(student, emotionStats);
     }
 
@@ -43,6 +52,7 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
 
     @SuppressLint("NotifyDataSetChanged")
     public void updateData(List<Student> newList, List<Map<String, Float>> emotionStatsList) {
+        Log.d(TAG, "Updating data: studentList size = " + newList.size() + ", emotionStatsList size = " + emotionStatsList.size());
         this.studentList.clear();
         this.studentList.addAll(newList);
         this.emotionStatsList.clear();

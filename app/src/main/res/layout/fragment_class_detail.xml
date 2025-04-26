@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="#161B58"
     android:orientation="vertical"
-    tools:context=".view.StudentFragment">
+    tools:context=".view.ClassDetailFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,8 +14,10 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center">
-            <!-- Add Button -->
+            android:layout_gravity="center"
+            android:orientation="horizontal">
+
+            <!-- Back Button -->
             <ImageView
                 android:id="@+id/back_btn"
                 android:layout_width="40dp"
@@ -24,6 +26,8 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:src="@drawable/ic_back" />
+
+
         </LinearLayout>
 
         <LinearLayout
@@ -66,8 +70,17 @@
                     android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
-
-
+        <!-- Add Student Button -->
+        <ImageView
+            android:id="@+id/add_student_btn"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center"
+            android:layout_marginStart="85dp"
+            android:layout_marginTop="15dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_add_student" />
     </LinearLayout>
 
     <!-- RecyclerView hiển thị danh sách lớp học -->

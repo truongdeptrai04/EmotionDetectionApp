@@ -27,6 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -176,11 +177,39 @@ public class FirebaseHelper {
     }
 
     public void deleteStudent(String studentId, OnOperationCompleteCallback callback) {
-        db.collection("Students").document(studentId)
-                .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
+        WriteBatch batch = db.batch();
+
+        db.collection("StudentClasses")
+                .whereEqualTo("studentId", studentId)
+                .get()
+                .addOnSuccessListener(querySnapshot ->{
+                    for(QueryDocumentSnapshot doc : querySnapshot){
+                        batch.delete(doc.getReference());
+                    }
+                    db.collection("StudentEmotionStats")
+                            .whereEqualTo("studentId", studentId)
+                            .get()
+                            .addOnSuccessListener(statsSnapshot ->{
+                                for (QueryDocumentSnapshot doc : statsSnapshot) {
+                                    batch.delete(doc.getReference());
+                                }
+
+                                batch.delete(db.collection("Students").document(studentId));
+
+                                batch.commit()
+                                        .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                        .addOnFailureListener(e -> {
+                                            android.util.Log.e("FirebaseHelper", "Failed to delete student: " + e.getMessage());
+                                            callback.onFailure(e);
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                android.util.Log.e("FirebaseHelper", "Failed to query StudentEmotionStats: " + e.getMessage());
+                                callback.onFailure(e);
+                            });
+                })
                 .addOnFailureListener(e -> {
-                    android.util.Log.e("FirebaseHelper", "Failed to delete student: " + e.getMessage());
+                    android.util.Log.e("FirebaseHelper", "Failed to query StudentClasses: " + e.getMessage());
                     callback.onFailure(e);
                 });
     }
