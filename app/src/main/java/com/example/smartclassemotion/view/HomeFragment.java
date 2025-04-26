@@ -1,6 +1,7 @@
 package com.example.smartclassemotion.view;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
 import android.util.Log;
@@ -326,6 +327,43 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
     @Override
     public void onEditClass(ClassItem classItem) {
         showAddClassFrame(classItem);
+    }
+
+    @Override
+    public void onDeleteClass(ClassItem classItem){
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Delete Class")
+                .setMessage("Are you sure you want to delete class " + classItem.getClassName() + "?")
+                .setPositiveButton("Yes", (dialog, which)->{
+                    firebaseHelper.deleteClass(classItem.getClassId(), new OnOperationCompleteCallback() {
+                        @Override
+                        public void onSuccess() {
+                            int position = -1;
+                            for(int i = 0; i < classList.size(); i++){
+                                if(classList.get(i).getClassId().equals(classItem.getClassId())){
+                                    position = i;
+                                    break;
+                                }
+                            }
+                            if(position != -1){
+                                classList.remove(position);
+                                classAdapter.notifyItemRemoved(position);
+                                binding.activeClassCount.setText(String.valueOf(classList.size()));
+                            }
+                            Toast.makeText(requireContext(), "Class deleted successfully", Toast.LENGTH_SHORT).show();
+                            Log.d(TAG, "Class deleted successfully: " + classItem.getClassId());
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(getContext(), "Failed to delete class: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Failed to delete class: " + e.getMessage());
+                        }
+                    });
+                })
+                .setNegativeButton("No", null)
+                .setIcon(R.drawable.ic_dialog_alert)
+                .show();
     }
 
     private void setupMenuBar(String userId) {

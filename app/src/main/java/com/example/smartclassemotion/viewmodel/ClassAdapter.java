@@ -1,6 +1,7 @@
 package com.example.smartclassemotion.viewmodel;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -24,6 +25,7 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
 
     public interface OnClassActionListener {
         void onEditClass(ClassItem classItem);
+        void onDeleteClass(ClassItem classItem);
     }
 
     public ClassAdapter(List<ClassItem> classList, String userId, OnClassActionListener actionListener) {
@@ -92,6 +94,12 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
                     actionListener.onEditClass(classItem);
                 }
                 android.util.Log.d("ClassAdapter", "Edit button clicked for classId: " + classItem.getClassId());
+            });
+            binding.deleteBtn.setOnClickListener(view -> {
+                if(actionListener != null){
+                    actionListener.onDeleteClass(classItem);
+                }
+                Log.d("ClassAdapter", "Delete button clicked for classId: " + classItem.getClassId());
             });
         }
     }

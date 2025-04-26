@@ -463,4 +463,64 @@ public class FirebaseHelper {
                 .addOnSuccessListener(documentReference -> successListener.onSuccess(null))
                 .addOnFailureListener(failureListener);
     }
+    public void deleteClass(String classId, OnOperationCompleteCallback callback){
+        WriteBatch batch = db.batch();
+
+        batch.delete(db.collection("Classes").document(classId));
+        db.collection("StudentClasses")
+                .whereEqualTo("classId", classId)
+                .get()
+                .addOnSuccessListener(querySnapshot ->{
+                    for(QueryDocumentSnapshot doc : querySnapshot){
+                        batch.delete(doc.getReference());
+                    }
+                    db.collection("ClassEmotionStats")
+                            .whereEqualTo("classId", classId)
+                            .get()
+                            .addOnSuccessListener(statSnapshot ->{
+                                for(QueryDocumentSnapshot doc : statSnapshot){
+                                    batch.delete(doc.getReference());
+                                }
+
+                                db.collection("Alerts")
+                                        .whereEqualTo("classId", classId)
+                                        .get()
+                                        .addOnSuccessListener(alertSnapshot -> {
+                                            for (QueryDocumentSnapshot doc : alertSnapshot) {
+                                                batch.delete(doc.getReference());
+                                            }
+                                            db.collection("StudentEmotionStats")
+                                                    .whereEqualTo("classId", classId)
+                                                    .get()
+                                                    .addOnSuccessListener(studentStatsSnapshot ->{
+                                                        for (QueryDocumentSnapshot doc : studentStatsSnapshot) {
+                                                            batch.delete(doc.getReference());
+                                                        }
+                                                        batch.commit()
+                                                                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                                                .addOnFailureListener(e -> {
+                                                                    android.util.Log.e("FirebaseHelper", "Failed to delete class: " + e.getMessage());
+                                                                    callback.onFailure(e);
+                                                                });
+                                                    })
+                                                    .addOnFailureListener(e -> {
+                                                        android.util.Log.e("FirebaseHelper", "Failed to delete student stats: " + e.getMessage());
+                                                        callback.onFailure(e);
+                                                    });
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            android.util.Log.e("FirebaseHelper", "Failed to delete alerts: " + e.getMessage());
+                                            callback.onFailure(e);
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                android.util.Log.e("FirebaseHelper", "Failed to delete class stats: " + e.getMessage());
+                                callback.onFailure(e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("FirebaseHelper", "Failed to delete student classes: " + e.getMessage());
+                    callback.onFailure(e);
+                });
+    }
 }
