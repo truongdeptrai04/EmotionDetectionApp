@@ -15,6 +15,7 @@ import com.example.smartclassemotion.utils.OnMaxClassIdCallback;
 import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentCountCallback;
+import com.example.smartclassemotion.utils.OnTimeConflictCallback;
 import com.example.smartclassemotion.utils.StudentEmotionStatsCallback;
 import com.example.smartclassemotion.utils.StudentListCallback;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -31,6 +32,7 @@ import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -522,5 +524,34 @@ public class FirebaseHelper {
                     android.util.Log.e("FirebaseHelper", "Failed to delete student classes: " + e.getMessage());
                     callback.onFailure(e);
                 });
+    }
+    public void checkClassTimeConflict(String userId, String dayOfWeek, Timestamp startTime, Timestamp endTime, String excludeClassId, OnTimeConflictCallback callback){
+        db.collection("Classes")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("dayOfWeek", dayOfWeek)
+                .get()
+                .addOnSuccessListener(querySnapshot ->{
+                    for(QueryDocumentSnapshot doc : querySnapshot){
+                        String classId = doc.getId();
+                        if(excludeClassId != null && classId.equals(excludeClassId)){
+                            continue;
+                        }
+                        Timestamp existingStartTime = doc.getTimestamp("startTime");
+                        Timestamp existingEndTime = doc.getTimestamp("endTime");
+                        String className = doc.getString("className");
+
+                        if(startTime.toDate().getTime() >= existingStartTime.toDate().getTime() &&
+                        startTime.toDate().getTime() < existingEndTime.toDate().getTime() ||
+                        startTime.toDate().getTime() <= existingStartTime.toDate().getTime() &&
+                        endTime.toDate().getTime() >=existingEndTime.toDate().getTime() ||
+                        endTime.toDate().getTime() > existingStartTime.toDate().getTime() &&
+                        endTime.toDate().getTime() <= existingEndTime.toDate().getTime()){
+                            callback.onConflict(className);
+                            return;
+                        }
+                    }
+                    callback.onNoConflict();
+                })
+                .addOnFailureListener(e -> callback.onError(e));
     }
 }

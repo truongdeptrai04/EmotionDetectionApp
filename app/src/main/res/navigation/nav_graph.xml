@@ -22,7 +22,6 @@
                 app:argType="string" />
         </action>
     </fragment>
-
     <!-- Signup Fragments -->
     <fragment
         android:id="@+id/signupFragment"

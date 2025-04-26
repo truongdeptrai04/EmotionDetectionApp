@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
@@ -22,6 +23,7 @@ import com.example.smartclassemotion.models.ClassItem;
 import com.example.smartclassemotion.utils.ClassListCallback;
 import com.example.smartclassemotion.utils.OnMaxClassIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
+import com.example.smartclassemotion.utils.OnTimeConflictCallback;
 import com.example.smartclassemotion.viewmodel.ClassAdapter;
 import com.google.firebase.Timestamp;
 
@@ -65,8 +67,17 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
         }
 
         binding.classRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        classAdapter = new ClassAdapter(classList, userId, this); // Truyền this làm OnClassActionListener
+        classAdapter = new ClassAdapter(classList, userId, this);
         binding.classRecyclerView.setAdapter(classAdapter);
+
+        binding.descriptionInput.setOnFocusChangeListener( (view, hasFocus) -> {
+            if (hasFocus) {
+                binding.addClassFrame.post(() -> {
+                    ScrollView scrollView = (ScrollView) binding.addClassFrame.getChildAt(0);
+                    scrollView.smoothScrollTo(0, binding.descriptionInput.getBottom());
+                });
+            }
+        });
 
         loadClassesFromFireStore(userId);
         setupMenuBar(userId);
@@ -182,50 +193,67 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
             Timestamp startTime = new Timestamp(startCal.getTime());
             Timestamp endTime = new Timestamp(endCal.getTime());
 
-            if (isEditMode) {
-                // Chế độ chỉnh sửa
-                updateClass(editingClassId, className, startTime, endTime, dayOfWeek, description);
-            } else {
-                // Chế độ thêm mới
-                firebaseHelper.getMaxClassId(userId, new OnMaxClassIdCallback() {
-                    @Override
-                    public void onMaxClassIdFount(int maxNumber) {
-                        Map<String, Object> classData = new HashMap<>();
-                        classData.put("userId", userId);
-                        classData.put("className", className);
-                        classData.put("startTime", startTime);
-                        classData.put("endTime", endTime);
-                        classData.put("dayOfWeek", dayOfWeek);
-                        classData.put("description", description);
-
-                        firebaseHelper.addClass(classData, "", maxNumber + 1, new OnOperationCompleteCallback() {
+            firebaseHelper.checkClassTimeConflict(userId, dayOfWeek, startTime, endTime, isEditMode ? editingClassId : null, new OnTimeConflictCallback() {
+                @Override
+                public void onNoConflict() {
+                    if (isEditMode) {
+                        // Chế độ chỉnh sửa
+                        updateClass(editingClassId, className, startTime, endTime, dayOfWeek, description);
+                    } else {
+                        // Chế độ thêm mới
+                        firebaseHelper.getMaxClassId(userId, new OnMaxClassIdCallback() {
                             @Override
-                            public void onSuccess() {
-                                String newClassId = String.format("cl_%03d", maxNumber + 1);
-                                ClassItem newClass = new ClassItem(newClassId, userId, className, startTime, endTime, dayOfWeek, description);
-                                classList.add(newClass);
-                                classAdapter.notifyDataSetChanged();
-                                binding.activeClassCount.setText(String.valueOf(classList.size()));
-                                hideAddClassFrame();
-                                Toast.makeText(getContext(), "Thêm lớp thành công", Toast.LENGTH_SHORT).show();
-                                Log.d(TAG, "Thêm lớp: " + newClassId);
+                            public void onMaxClassIdFount(int maxNumber) {
+                                Map<String, Object> classData = new HashMap<>();
+                                classData.put("userId", userId);
+                                classData.put("className", className);
+                                classData.put("startTime", startTime);
+                                classData.put("endTime", endTime);
+                                classData.put("dayOfWeek", dayOfWeek);
+                                classData.put("description", description);
+
+                                firebaseHelper.addClass(classData, "", maxNumber + 1, new OnOperationCompleteCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        String newClassId = String.format("cl_%03d", maxNumber + 1);
+                                        ClassItem newClass = new ClassItem(newClassId, userId, className, startTime, endTime, dayOfWeek, description);
+                                        classList.add(newClass);
+                                        classAdapter.notifyDataSetChanged();
+                                        binding.activeClassCount.setText(String.valueOf(classList.size()));
+                                        hideAddClassFrame();
+                                        Toast.makeText(getContext(), "Thêm lớp thành công", Toast.LENGTH_SHORT).show();
+                                        Log.d(TAG, "Thêm lớp: " + newClassId);
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        Toast.makeText(getContext(), "Lỗi khi thêm lớp: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        Log.e(TAG, "Lỗi khi thêm lớp: " + e.getMessage());
+                                    }
+                                });
                             }
 
                             @Override
-                            public void onFailure(Exception e) {
-                                Toast.makeText(getContext(), "Lỗi khi thêm lớp: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.e(TAG, "Lỗi khi thêm lớp: " + e.getMessage());
+                            public void onError(Exception e) {
+                                Toast.makeText(getContext(), "Lỗi khi tạo mã lớp: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.e(TAG, "Lỗi khi lấy classId lớn nhất: " + e.getMessage());
                             }
                         });
                     }
+                }
 
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(getContext(), "Lỗi khi tạo mã lớp: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        Log.e(TAG, "Lỗi khi lấy classId lớn nhất: " + e.getMessage());
-                    }
-                });
-            }
+                @Override
+                public void onConflict(String conflictClassName) {
+                    Toast.makeText(getContext(), "Time conflict with class: " + conflictClassName, Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "Time conflict with class: " + conflictClassName);
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Toast.makeText(getContext(), "Error checking time conflict: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error checking time conflict: " + e.getMessage());
+                }
+            });
         });
 
         binding.cancelBtn.setOnClickListener(view -> {
