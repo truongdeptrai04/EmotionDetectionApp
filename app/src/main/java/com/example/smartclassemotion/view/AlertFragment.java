@@ -1,4 +1,5 @@
 package com.example.smartclassemotion.view;
+
 import static android.content.ContentValues.TAG;
 
 import android.os.Bundle;
@@ -55,7 +56,7 @@ public class AlertFragment extends Fragment {
             }
         });
 
-        viewModel.loadAlerts();
+        viewModel.loadAlerts(userId); // Truyền userId vào loadAlerts
         setupMenuBar();
         return binding.getRoot();
     }
@@ -69,15 +70,17 @@ public class AlertFragment extends Fragment {
     private void navigateToHomeFragment() {
         navigateTo(R.id.action_alertFragment_to_homeFragment);
     }
+
     private void navigateToStudentFragment() {
         navigateTo(R.id.action_alertFragment_to_studentFragment);
     }
+
     private void navigateToSettingFragment() {
         navigateTo(R.id.action_alertFragment_to_settingFragment);
     }
 
-    private void navigateTo(int actionId){
-        if(userId == null){
+    private void navigateTo(int actionId) {
+        if (userId == null) {
             showToast("User ID not found");
             return;
         }
@@ -88,11 +91,12 @@ public class AlertFragment extends Fragment {
         Log.d(TAG, "Navigating to actionId: " + actionId + " with userId: " + userId);
     }
 
-    private void showToast(String message){
+    private void showToast(String message) {
         if (getActivity() != null) {
             Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
         }
     }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();

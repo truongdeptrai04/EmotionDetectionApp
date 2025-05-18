@@ -11,7 +11,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -26,17 +28,14 @@ import com.example.smartclassemotion.R;
 import com.example.smartclassemotion.database.FirebaseHelper;
 import com.example.smartclassemotion.databinding.FragmentAddStudentBinding;
 import com.example.smartclassemotion.databinding.FragmentStudentBinding;
-import com.example.smartclassemotion.models.ClassItem;
 import com.example.smartclassemotion.models.Student;
-import com.example.smartclassemotion.models.StudentClasses;
-import com.example.smartclassemotion.utils.ClassListCallback;
 import com.example.smartclassemotion.utils.OnImageUploadedCallback;
 import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentActionListener;
-import com.example.smartclassemotion.utils.OnStudentCountCallback;
 import com.example.smartclassemotion.utils.StudentListCallback;
 import com.example.smartclassemotion.viewmodel.StudentAdapter;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.Timestamp;
 
@@ -56,6 +55,13 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
     private StudentAdapter studentAdapter;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
     private Uri selectedImageUri;
+
+//    @Override
+//    public void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        // Đặt adjustResize khi vào StudentFragment
+//        requireActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+//    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -117,7 +123,6 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         });
     }
 
-
     private void setupAddButton() {
         binding.addBtn.setOnClickListener(v -> showAddStudentDialog());
     }
@@ -126,6 +131,27 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         FragmentAddStudentBinding dialogBinding = FragmentAddStudentBinding.inflate(getLayoutInflater());
         dialog.setContentView(dialogBinding.getRoot());
+
+        // Đặt chiều cao tối thiểu và trạng thái mở rộng cho BottomSheetDialog
+        View bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (bottomSheet != null) {
+            BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bottomSheet);
+            behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+            behavior.setPeekHeight(0); // Loại bỏ trạng thái thu gọn
+        }
+
+        // Tự động cuộn đến trường đang focus
+        ScrollView scrollView = (ScrollView) dialogBinding.getRoot();
+        dialogBinding.emailInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollView.post(() -> scrollView.smoothScrollTo(0, dialogBinding.emailInputLayout.getTop()));
+            }
+        });
+        dialogBinding.phoneInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollView.post(() -> scrollView.smoothScrollTo(0, dialogBinding.phoneInputLayout.getTop()));
+            }
+        });
 
         dialogBinding.dateOfBirthInput.setOnClickListener(v -> {
             Calendar calendar = Calendar.getInstance();
@@ -217,18 +243,41 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         });
         dialog.show();
     }
+
     private boolean validateInput(String name, Object dateOfBirthObj, String gender, String email, String phone) {
-        if (name.isEmpty()) {showToast("Name cannot be empty");return false;}
-        if (dateOfBirthObj == null) {showToast("Please select date of birth");return false;}
-        if (gender.isEmpty()) {showToast("Please select gender");return false;}
-        if (email.isEmpty()) {showToast("Email cannot be empty");return false;}
-        if (!email.matches("[A-Za-z0-9+_.-]+@(.+)$")) {showToast("Invalid email format");return false;}
-        if (phone.isEmpty()) {showToast("Phone cannot be empty");return false;}
-        if (!phone.matches("^[0-9+]{9,15}$")) {showToast("Phone number is invalid (9-15 digits)");return false;}
+        if (name.isEmpty()) {
+            showToast("Name cannot be empty");
+            return false;
+        }
+        if (dateOfBirthObj == null) {
+            showToast("Please select date of birth");
+            return false;
+        }
+        if (gender.isEmpty()) {
+            showToast("Please select gender");
+            return false;
+        }
+        if (email.isEmpty()) {
+            showToast("Email cannot be empty");
+            return false;
+        }
+        if (!email.matches("[A-Za-z0-9+_.-]+@(.+)$")) {
+            showToast("Invalid email format");
+            return false;
+        }
+        if (phone.isEmpty()) {
+            showToast("Phone cannot be empty");
+            return false;
+        }
+        if (!phone.matches("^[0-9+]{9,15}$")) {
+            showToast("Phone number is invalid (9-15 digits)");
+            return false;
+        }
         return true;
     }
+
     private void saveStudent(Student student, String studentName, BottomSheetDialog dialog) {
-        if(student.getStudentId() == null){
+        if (student.getStudentId() == null) {
             showToast("Student ID not found");
             return;
         }
@@ -338,15 +387,17 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
     private void navigateToHomeFragment() {
         navigateTo(R.id.action_studentFragment_to_homeFragment);
     }
+
     private void navigateToReportFragment() {
         navigateTo(R.id.action_studentFragment_to_alertFragment);
     }
+
     private void navigateToSettingFragment() {
         navigateTo(R.id.action_studentFragment_to_settingFragment);
     }
 
-    private void navigateTo(int actionId){
-        if(userId == null){
+    private void navigateTo(int actionId) {
+        if (userId == null) {
             showToast("User ID not found");
             return;
         }
@@ -357,7 +408,7 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
         Log.d(TAG, "Navigating to actionId: " + actionId + " with userId: " + userId);
     }
 
-    private void showToast(String message){
+    private void showToast(String message) {
         if (getActivity() != null) {
             Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
         }
@@ -366,6 +417,7 @@ public class StudentFragment extends Fragment implements OnStudentActionListener
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+//        requireActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
         binding = null;
     }
 }

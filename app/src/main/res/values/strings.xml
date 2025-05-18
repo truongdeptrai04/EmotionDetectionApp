@@ -45,6 +45,7 @@
     <string name="student_added">Student %s added successfully</string>
     <string name="failed_to_add_student">Failed to add student</string>
     <string name="invalid_input">Please fill all required fields</string>
+    <string name="select_date">Select Date</string>
 
     <string-array name="class_options">
         <item>All Classes</item>

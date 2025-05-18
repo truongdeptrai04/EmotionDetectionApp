@@ -10,11 +10,15 @@ import com.example.smartclassemotion.models.StudentClasses;
 import com.example.smartclassemotion.utils.ClassListCallback;
 import com.example.smartclassemotion.utils.EmotionStatsCallback;
 import com.example.smartclassemotion.utils.FirebaseCallback;
+import com.example.smartclassemotion.utils.OnDatesLoadedCallback;
+import com.example.smartclassemotion.utils.OnEmotionStatsLoadedCallback;
 import com.example.smartclassemotion.utils.OnImageUploadedCallback;
 import com.example.smartclassemotion.utils.OnMaxClassIdCallback;
 import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentCountCallback;
+import com.example.smartclassemotion.utils.OnStudentEmotionStatsLoadedCallback;
+import com.example.smartclassemotion.utils.OnStudentSessionEmotionStatsCallback;
 import com.example.smartclassemotion.utils.StudentEmotionStatsCallback;
 import com.example.smartclassemotion.utils.StudentListCallback;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -31,7 +35,10 @@ import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -521,6 +528,233 @@ public class FirebaseHelper {
                 .addOnFailureListener(e -> {
                     android.util.Log.e("FirebaseHelper", "Failed to delete student classes: " + e.getMessage());
                     callback.onFailure(e);
+                });
+    }
+    public void getAvailableDates(String classId, OnDatesLoadedCallback callback) {
+        List<String> dates = new ArrayList<>();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+        db.collection("ClassEmotionStats")
+                .whereEqualTo("classId", classId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Timestamp createAt = doc.getTimestamp("createAt");
+                        if (createAt != null) {
+                            String date = dateFormat.format(createAt.toDate());
+                            if (!dates.contains(date)) {
+                                dates.add(date);
+                            }
+                        }
+                    }
+                    callback.onDatesLoaded(dates);
+                })
+                .addOnFailureListener(e -> {
+                    callback.onDatesLoaded(new ArrayList<>());
+                });
+    }
+
+    public void getEmotionStatsByDate(String classId, String selectedDate, OnEmotionStatsLoadedCallback callback) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Calendar calendar = Calendar.getInstance();
+        try {
+            calendar.setTime(dateFormat.parse(selectedDate));
+        } catch (Exception e) {
+            callback.onEmotionStatsLoaded(new HashMap<>());
+            return;
+        }
+
+        Calendar start = (Calendar) calendar.clone();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        Calendar end = (Calendar) calendar.clone();
+        end.set(Calendar.HOUR_OF_DAY, 23);
+        end.set(Calendar.MINUTE, 59);
+        end.set(Calendar.SECOND, 59);
+        end.set(Calendar.MILLISECOND, 999);
+
+        db.collection("ClassEmotionStats")
+                .whereEqualTo("classId", classId)
+                .whereGreaterThanOrEqualTo("createAt", new Timestamp(start.getTime()))
+                .whereLessThanOrEqualTo("createAt", new Timestamp(end.getTime()))
+                .orderBy("createAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    Map<String, Float> emotionStats = new HashMap<>();
+                    if (!querySnapshot.isEmpty()) {
+                        DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        emotionStats.put("happy", doc.getDouble("happy") != null ? doc.getDouble("happy").floatValue() : 0f);
+                        emotionStats.put("sad", doc.getDouble("sad") != null ? doc.getDouble("sad").floatValue() : 0f);
+                        emotionStats.put("angry", doc.getDouble("angry") != null ? doc.getDouble("angry").floatValue() : 0f);
+                        emotionStats.put("neutral", doc.getDouble("neutral") != null ? doc.getDouble("neutral").floatValue() : 0f);
+                        emotionStats.put("fear", doc.getDouble("fear") != null ? doc.getDouble("fear").floatValue() : 0f);
+                        emotionStats.put("surprise", doc.getDouble("surprise") != null ? doc.getDouble("surprise").floatValue() : 0f);
+                    }
+                    callback.onEmotionStatsLoaded(emotionStats);
+                })
+                .addOnFailureListener(e -> {
+                    callback.onEmotionStatsLoaded(new HashMap<>());
+                });
+    }
+
+    public void getStudentEmotionStatsByDate(String classId, String selectedDate, OnStudentEmotionStatsLoadedCallback callback) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Calendar calendar = Calendar.getInstance();
+        try {
+            calendar.setTime(dateFormat.parse(selectedDate));
+        } catch (Exception e) {
+            callback.onStudentEmotionStatsLoaded(new ArrayList<>(), new ArrayList<>());
+            return;
+        }
+
+        Calendar start = (Calendar) calendar.clone();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        Calendar end = (Calendar) calendar.clone();
+        end.set(Calendar.HOUR_OF_DAY, 23);
+        end.set(Calendar.MINUTE, 59);
+        end.set(Calendar.SECOND, 59);
+        end.set(Calendar.MILLISECOND, 999);
+
+        // Lấy danh sách học sinh trong lớp
+        List<Student> students = new ArrayList<>();
+        List<Map<String, Float>> emotionStatsList = new ArrayList<>();
+
+        db.collection("StudentClasses")
+                .whereEqualTo("classId", classId)
+                .get()
+                .addOnSuccessListener(classSnapshot -> {
+                    List<String> studentIds = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : classSnapshot) {
+                        String studentId = doc.getString("studentId");
+                        if (studentId != null) {
+                            studentIds.add(studentId);
+                        }
+                    }
+
+                    if (studentIds.isEmpty()) {
+                        callback.onStudentEmotionStatsLoaded(students, emotionStatsList);
+                        return;
+                    }
+
+                    // Lấy thông tin học sinh
+                    db.collection("Students")
+                            .whereIn("studentId", studentIds)
+                            .get()
+                            .addOnSuccessListener(studentSnapshot -> {
+                                for (QueryDocumentSnapshot doc : studentSnapshot) {
+                                    Student student = doc.toObject(Student.class);
+                                    students.add(student);
+                                }
+
+                                // Lấy báo cáo cảm xúc từ StudentSessionEmotionReports
+                                db.collection("StudentSessionEmotionReports")
+                                        .whereEqualTo("classId", classId)
+                                        .whereGreaterThanOrEqualTo("createAt", new Timestamp(start.getTime()))
+                                        .whereLessThanOrEqualTo("createAt", new Timestamp(end.getTime()))
+                                        .get()
+                                        .addOnSuccessListener(reportSnapshot -> {
+                                            Map<String, Map<String, Float>> studentEmotionMap = new HashMap<>();
+                                            for (QueryDocumentSnapshot doc : reportSnapshot) {
+                                                String studentId = doc.getString("studentId");
+                                                Map<String, Float> emotionStats = new HashMap<>();
+                                                emotionStats.put("happy", doc.getDouble("happy") != null ? doc.getDouble("happy").floatValue() : 0f);
+                                                emotionStats.put("sad", doc.getDouble("sad") != null ? doc.getDouble("sad").floatValue() : 0f);
+                                                emotionStats.put("angry", doc.getDouble("angry") != null ? doc.getDouble("angry").floatValue() : 0f);
+                                                emotionStats.put("neutral", doc.getDouble("neutral") != null ? doc.getDouble("neutral").floatValue() : 0f);
+                                                emotionStats.put("fear", doc.getDouble("fear") != null ? doc.getDouble("fear").floatValue() : 0f);
+                                                emotionStats.put("surprise", doc.getDouble("surprise") != null ? doc.getDouble("surprise").floatValue() : 0f);
+                                                studentEmotionMap.put(studentId, emotionStats);
+                                            }
+
+                                            // Đồng bộ emotionStatsList với students
+                                            for (Student student : students) {
+                                                Map<String, Float> emotionStats = studentEmotionMap.getOrDefault(student.getStudentId(), null);
+                                                if (emotionStats == null) {
+                                                    emotionStats = new HashMap<>();
+                                                    emotionStats.put("happy", 0f);
+                                                    emotionStats.put("sad", 0f);
+                                                    emotionStats.put("angry", 0f);
+                                                    emotionStats.put("neutral", 0f);
+                                                    emotionStats.put("fear", 0f);
+                                                    emotionStats.put("surprise", 0f);
+                                                }
+                                                emotionStatsList.add(emotionStats);
+                                            }
+
+                                            callback.onStudentEmotionStatsLoaded(students, emotionStatsList);
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            callback.onStudentEmotionStatsLoaded(students, new ArrayList<>());
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                callback.onStudentEmotionStatsLoaded(new ArrayList<>(), new ArrayList<>());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    callback.onStudentEmotionStatsLoaded(new ArrayList<>(), new ArrayList<>());
+                });
+    }
+    public void getStudentSessionEmotionStats(String studentId, String classId, OnStudentSessionEmotionStatsCallback callback) {
+        db.collection("StudentSessionEmotionReports")
+                .whereEqualTo("studentId", studentId)
+                .whereEqualTo("classId", classId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    Map<String, Float> emotionStats = new HashMap<>();
+                    emotionStats.put("happy", 0f);
+                    emotionStats.put("sad", 0f);
+                    emotionStats.put("angry", 0f);
+                    emotionStats.put("neutral", 0f);
+                    emotionStats.put("fear", 0f);
+                    emotionStats.put("surprise", 0f);
+
+                    if (querySnapshot.isEmpty()) {
+                        callback.onStudentSessionEmotionStatsLoaded(emotionStats);
+                        return;
+                    }
+
+                    int count = 0;
+                    float happySum = 0f, sadSum = 0f, angrySum = 0f, neutralSum = 0f, fearSum = 0f, surpriseSum = 0f;
+
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        happySum += doc.getDouble("happy") != null ? doc.getDouble("happy").floatValue() : 0f;
+                        sadSum += doc.getDouble("sad") != null ? doc.getDouble("sad").floatValue() : 0f;
+                        angrySum += doc.getDouble("angry") != null ? doc.getDouble("angry").floatValue() : 0f;
+                        neutralSum += doc.getDouble("neutral") != null ? doc.getDouble("neutral").floatValue() : 0f;
+                        fearSum += doc.getDouble("fear") != null ? doc.getDouble("fear").floatValue() : 0f;
+                        surpriseSum += doc.getDouble("surprise") != null ? doc.getDouble("surprise").floatValue() : 0f;
+                        count++;
+                    }
+
+                    if (count > 0) {
+                        emotionStats.put("happy", happySum / count);
+                        emotionStats.put("sad", sadSum / count);
+                        emotionStats.put("angry", angrySum / count);
+                        emotionStats.put("neutral", neutralSum / count);
+                        emotionStats.put("fear", fearSum / count);
+                        emotionStats.put("surprise", surpriseSum / count);
+                    }
+
+                    callback.onStudentSessionEmotionStatsLoaded(emotionStats);
+                })
+                .addOnFailureListener(e -> {
+                    Map<String, Float> emotionStats = new HashMap<>();
+                    emotionStats.put("happy", 0f);
+                    emotionStats.put("sad", 0f);
+                    emotionStats.put("angry", 0f);
+                    emotionStats.put("neutral", 0f);
+                    emotionStats.put("fear", 0f);
+                    emotionStats.put("surprise", 0f);
+                    callback.onStudentSessionEmotionStatsLoaded(emotionStats);
                 });
     }
 }

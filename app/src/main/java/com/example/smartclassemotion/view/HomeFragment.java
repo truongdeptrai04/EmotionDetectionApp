@@ -237,6 +237,7 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
     private void showAddClassFrame() {
         binding.addClassFrame.setTranslationY(1000f);
         binding.addClassFrame.setVisibility(View.VISIBLE);
+        binding.addClassTitle.setText("Add New Class"); // Tiêu đề khi thêm mới
         binding.addClassFrame.animate()
                 .translationY(0f)
                 .setDuration(300)
@@ -253,14 +254,20 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
     private void showAddClassFrame(ClassItem classItem) {
         isEditMode = true; // Chế độ chỉnh sửa
         editingClassId = classItem.getClassId();
-        showAddClassFrame();
+        binding.addClassFrame.setTranslationY(1000f);
+        binding.addClassFrame.setVisibility(View.VISIBLE);
+        binding.addClassTitle.setText("Edit Class"); // Tiêu đề khi chỉnh sửa
+        binding.addClassFrame.animate()
+                .translationY(0f)
+                .setDuration(300)
+                .start();
         // Điền thông tin lớp học
         binding.classNameInput.setText(classItem.getClassName());
         binding.startTimeInput.setText(TIME_FORMAT.format(classItem.getStartTime().toDate()));
         binding.endTimeInput.setText(TIME_FORMAT.format(classItem.getEndTime().toDate()));
         binding.descriptionInput.setText(classItem.getDescription());
         // Đặt dayOfWeek
-        String[] days = getResources().getStringArray(R.array.day_of_week); // Giả định có array days_of_week trong strings.xml
+        String[] days = getResources().getStringArray(R.array.day_of_week);
         for (int i = 0; i < days.length; i++) {
             if (days[i].equals(classItem.getDayOfWeek())) {
                 binding.dayOfWeekInput.setSelection(i);
@@ -281,6 +288,7 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
         binding.endTimeInput.setText("");
         binding.descriptionInput.setText("");
         binding.dayOfWeekInput.setSelection(0);
+        binding.addClassTitle.setText("Add New Class"); // Reset tiêu đề
         isEditMode = false; // Reset chế độ
         editingClassId = null;
         Log.d(TAG, "Hiding add class frame");

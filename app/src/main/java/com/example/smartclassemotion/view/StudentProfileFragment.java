@@ -1,13 +1,12 @@
 package com.example.smartclassemotion.view;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,7 +19,7 @@ import com.example.smartclassemotion.R;
 import com.example.smartclassemotion.database.FirebaseHelper;
 import com.example.smartclassemotion.databinding.FragmentStudentProfileBinding;
 import com.example.smartclassemotion.models.Student;
-import com.google.firebase.firestore.Query;
+import com.example.smartclassemotion.utils.OnStudentSessionEmotionStatsCallback;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import org.eazegraph.lib.models.PieModel;
@@ -41,7 +40,7 @@ public class StudentProfileFragment extends Fragment {
     private List<String> className;
     private List<String> classIds;
     private ArrayAdapter<String> classSpinnerAdapter;
-    private boolean isInitiaLoad = true;
+    private boolean isInitialLoad = true;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -165,11 +164,11 @@ public class StudentProfileFragment extends Fragment {
         );
         classSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.spinnerClass.setAdapter(classSpinnerAdapter);
-        binding.spinnerClass.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        binding.spinnerClass.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(isInitiaLoad){
-                    isInitiaLoad = false;
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (isInitialLoad) {
+                    isInitialLoad = false;
                     Log.d(TAG, "Initial spinner selection ignored");
                     return;
                 }
@@ -183,7 +182,7 @@ public class StudentProfileFragment extends Fragment {
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
                 Log.d(TAG, "No class selected");
             }
         });
@@ -221,7 +220,6 @@ public class StudentProfileFragment extends Fragment {
                         return;
                     }
 
-                    // Truy vấn Classes để lấy className dựa trên classId
                     firebaseHelper.getDb().collection("Classes")
                             .whereIn("classId", classIdList)
                             .orderBy("className")
@@ -238,8 +236,8 @@ public class StudentProfileFragment extends Fragment {
                                 classSpinnerAdapter.notifyDataSetChanged();
                                 Log.d(TAG, "Class list loaded: " + className.size() + " classes for student_id: " + studentId);
                                 if (!className.isEmpty()) {
-                                    binding.spinnerClass.setSelection(0); // Chọn lớp đầu tiên
-                                    updateEmotionChart(classIds.get(0)); // Cập nhật biểu đồ cho lớp đầu tiên
+                                    binding.spinnerClass.setSelection(0);
+                                    updateEmotionChart(classIds.get(0));
                                 } else {
                                     Log.w(TAG, "No matching classes found in Classes collection");
                                     showToast("No matching classes found");
@@ -267,50 +265,40 @@ public class StudentProfileFragment extends Fragment {
 
     private void updateEmotionChart(String classId) {
         binding.chartEmotion.clearChart();
-        if (studentId == null) {
-            Log.e(TAG, "Student ID is null, cannot update emotion chart");
+        if (studentId == null || classId == null || classId.isEmpty()) {
+            Log.e(TAG, "Student ID or Class ID is null/empty, cannot update emotion chart");
+            binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
+            binding.chartEmotion.startAnimation();
             return;
         }
 
-        Query query = firebaseHelper.getDb().collection("StudentEmotionStats")
-                .whereEqualTo("studentId", studentId)
-                .orderBy("createAt", Query.Direction.DESCENDING)
-                .limit(1);
-        if (!classId.isEmpty()) {
-            query = query.whereEqualTo("classId", classId);
-        }
+        firebaseHelper.getStudentSessionEmotionStats(studentId, classId, new OnStudentSessionEmotionStatsCallback() {
+            @Override
+            public void onStudentSessionEmotionStatsLoaded(Map<String, Float> emotionStats) {
+                binding.chartEmotion.clearChart();
+                float happy = emotionStats.getOrDefault("happy", 0f);
+                float sad = emotionStats.getOrDefault("sad", 0f);
+                float angry = emotionStats.getOrDefault("angry", 0f);
+                float neutral = emotionStats.getOrDefault("neutral", 0f);
+                float fear = emotionStats.getOrDefault("fear", 0f);
+                float surprise = emotionStats.getOrDefault("surprise", 0f);
 
-        query.get()
-                .addOnSuccessListener(querySnapshot -> {
-                    binding.chartEmotion.clearChart();
-                    if (!querySnapshot.isEmpty()) {
-                        Map<String, Object> data = querySnapshot.getDocuments().get(0).getData();
-                        float happy = getFloatValue(data, "happy");
-                        float sad = getFloatValue(data, "sad");
-                        float neutral = getFloatValue(data, "neutral");
-                        float angry = getFloatValue(data, "angry");
-                        float fear = getFloatValue(data, "fear");
-                        float surprise = getFloatValue(data, "surprise");
+                if (happy > 0) binding.chartEmotion.addPieSlice(new PieModel("Happy", happy, 0xFF4CAF50));
+                if (neutral > 0) binding.chartEmotion.addPieSlice(new PieModel("Neutral", neutral, 0xFFFFC107));
+                if (sad > 0) binding.chartEmotion.addPieSlice(new PieModel("Sad", sad, 0xFFD81B60));
+                if (angry > 0) binding.chartEmotion.addPieSlice(new PieModel("Angry", angry, 0xFFE91E63));
+                if (fear > 0) binding.chartEmotion.addPieSlice(new PieModel("Fear", fear, 0xFF9C27B0));
+                if (surprise > 0) binding.chartEmotion.addPieSlice(new PieModel("Surprise", surprise, 0xFF2196F3));
 
-                        if (happy > 0) binding.chartEmotion.addPieSlice(new PieModel("Happy", happy, 0xFF4CAF50));
-                        if (neutral > 0) binding.chartEmotion.addPieSlice(new PieModel("Neutral", neutral, 0xFFFFC107));
-                        if (sad > 0) binding.chartEmotion.addPieSlice(new PieModel("Sad", sad, 0xFFD81B60));
-                        if (angry > 0) binding.chartEmotion.addPieSlice(new PieModel("Angry", angry, 0xFFE91E63));
-                        if (fear > 0) binding.chartEmotion.addPieSlice(new PieModel("Fear", fear, 0xFF9C27B0));
-                        if (surprise > 0) binding.chartEmotion.addPieSlice(new PieModel("Surprise", surprise, 0xFF2196F3));
-                        Log.d(TAG, "Emotion stats loaded: happy=" + happy + ", sad=" + sad + ", neutral=" + neutral + ", angry=" + angry + ", fear=" + fear + ", surprise=" + surprise);
-                    } else {
-                        Log.d(TAG, "No emotion stats found for student_id: " + studentId + ", class_id: " + classId);
-                        binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
-                    }
-                    binding.chartEmotion.startAnimation();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load emotion stats: " + e.getMessage(), e);
-                    binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
-                    binding.chartEmotion.startAnimation();
-                    showToast("Failed to load emotion stats: " + e.getMessage());
-                });
+                if (happy == 0 && sad == 0 && angry == 0 && neutral == 0 && fear == 0 && surprise == 0) {
+                    Log.d(TAG, "No emotion stats found for student_id: " + studentId + ", class_id: " + classId);
+                    binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
+                }
+
+                Log.d(TAG, "Emotion stats loaded: happy=" + happy + ", sad=" + sad + ", neutral=" + neutral + ", angry=" + angry + ", fear=" + fear + ", surprise=" + surprise);
+                binding.chartEmotion.startAnimation();
+            }
+        });
     }
 
     private void setupEditMode() {
@@ -435,11 +423,7 @@ public class StudentProfileFragment extends Fragment {
         return value != null ? value : defaultValue;
     }
 
-    private float getFloatValue(Map<String, Object> data, String key) {
-        return data.get(key) != null ? ((Number) data.get(key)).floatValue() : 0f;
-    }
-
-    private void setSpinnerSelection(Spinner spinner, String[] items, String value) {
+    private void setSpinnerSelection(android.widget.Spinner spinner, String[] items, String value) {
         for (int i = 0; i < items.length; i++) {
             if (items[i].equals(value)) {
                 spinner.setSelection(i);

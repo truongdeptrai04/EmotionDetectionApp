@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
@@ -19,6 +20,9 @@ import com.example.smartclassemotion.R;
 import com.example.smartclassemotion.database.FirebaseHelper;
 import com.example.smartclassemotion.databinding.FragmentClassDetailBinding;
 import com.example.smartclassemotion.models.Student;
+import com.example.smartclassemotion.utils.OnDatesLoadedCallback;
+import com.example.smartclassemotion.utils.OnEmotionStatsLoadedCallback;
+import com.example.smartclassemotion.utils.OnStudentEmotionStatsLoadedCallback;
 import com.example.smartclassemotion.viewmodel.StudentEmotionAdapter;
 import com.example.smartclassemotion.viewmodel.StudentSelectAdapter;
 import com.google.firebase.Timestamp;
@@ -26,9 +30,12 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import org.eazegraph.lib.models.PieModel;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ClassDetailFragment extends Fragment {
@@ -41,6 +48,8 @@ public class ClassDetailFragment extends Fragment {
     private List<Student> studentList = new ArrayList<>();
     private List<Map<String, Float>> emotionStatsList = new ArrayList<>();
     private StudentEmotionAdapter studentEmotionAdapter;
+    private List<String> availableDates = new ArrayList<>();
+    private ArrayAdapter<String> dateAdapter;
 
     public ClassDetailFragment() {
     }
@@ -53,13 +62,14 @@ public class ClassDetailFragment extends Fragment {
 
         initializeArgument();
         setupRecyclerView();
+        setupDateSpinner();
         setupBackButton();
         setupMenuBar();
         setupAddStudentButton();
 
         if (classId != null) {
             binding.className.setText(className);
-            loadClassData(classId);
+            loadAvailableDates();
         } else {
             Log.w(TAG, "Class ID is null, cannot load class data");
             showToast("No class data available");
@@ -87,6 +97,43 @@ public class ClassDetailFragment extends Fragment {
         binding.studentRecycleView.setAdapter(studentEmotionAdapter);
     }
 
+    private void setupDateSpinner() {
+        dateAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, availableDates);
+        dateAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.dateSpinner.setAdapter(dateAdapter);
+        binding.dateSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String selectedDate = availableDates.get(position);
+                loadClassData(classId, selectedDate);
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                // Do nothing
+            }
+        });
+    }
+
+    private void loadAvailableDates() {
+        firebaseHelper.getAvailableDates(classId, new OnDatesLoadedCallback() {
+            @Override
+            public void onDatesLoaded(List<String> dates) {
+                if (getActivity() == null) return;
+                availableDates.clear();
+                availableDates.addAll(dates);
+                Collections.sort(availableDates, Collections.reverseOrder()); // Sắp xếp từ mới nhất
+                dateAdapter.notifyDataSetChanged();
+                if (!availableDates.isEmpty()) {
+                    binding.dateSpinner.setSelection(0); // Chọn ngày gần nhất
+                    loadClassData(classId, availableDates.get(0));
+                } else {
+                    showToast("No emotion reports available");
+                }
+            }
+        });
+    }
+
     private void setupBackButton() {
         binding.backBtn.setOnClickListener(v -> navigateToHomeFragment());
     }
@@ -101,23 +148,19 @@ public class ClassDetailFragment extends Fragment {
             return;
         }
 
-        // Tạo dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.TransparentDialog);
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_student, null);
         RecyclerView recyclerView = dialogView.findViewById(R.id.student_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        // Khởi tạo adapter với danh sách rỗng
         List<Student> availableStudents = new ArrayList<>();
-        StudentSelectAdapter studentAdapter = new StudentSelectAdapter(availableStudents, null); // Khởi tạo với null listener
+        StudentSelectAdapter studentAdapter = new StudentSelectAdapter(availableStudents, null);
         recyclerView.setAdapter(studentAdapter);
 
-        // Gán listener cho adapter sau khi khởi tạo
         studentAdapter.setOnStudentClickListener(student -> {
             addStudentToClass(student, availableStudents, studentAdapter);
         });
 
-        // Tải danh sách học sinh
         loadAvailableStudents(students -> {
             if (students.isEmpty()) {
                 showToast("No available students to add");
@@ -125,7 +168,6 @@ public class ClassDetailFragment extends Fragment {
                 builder.setMessage("No students available to add to this class.");
                 AlertDialog dialog = builder.create();
                 dialog.show();
-                // Gán sự kiện cho nút Cancel
                 dialogView.findViewById(R.id.cancel_button).setOnClickListener(v -> dialog.dismiss());
                 return;
             }
@@ -134,12 +176,10 @@ public class ClassDetailFragment extends Fragment {
             availableStudents.addAll(students);
             studentAdapter.notifyDataSetChanged();
 
-            // Thiết lập dialog
             builder.setView(dialogView);
             AlertDialog dialog = builder.create();
             dialog.show();
 
-            // Gán sự kiện cho các nút
             dialogView.findViewById(R.id.cancel_button).setOnClickListener(v -> dialog.dismiss());
             dialogView.findViewById(R.id.add_button).setOnClickListener(v -> {
                 showToast("Please select a student to add");
@@ -150,14 +190,12 @@ public class ClassDetailFragment extends Fragment {
     private void loadAvailableStudents(OnStudentsLoadedCallback callback) {
         List<Student> availableStudents = new ArrayList<>();
 
-        // Lấy danh sách tất cả học sinh của userId
         firebaseHelper.getDb().collection("Students")
                 .whereEqualTo("userId", userId)
                 .get()
                 .addOnSuccessListener(studentSnapshot -> {
                     List<String> studentIdsInClass = new ArrayList<>();
 
-                    // Lấy danh sách studentId đã có trong lớp
                     firebaseHelper.getDb().collection("StudentClasses")
                             .whereEqualTo("classId", classId)
                             .get()
@@ -169,7 +207,6 @@ public class ClassDetailFragment extends Fragment {
                                     }
                                 }
 
-                                // Lọc học sinh chưa có trong lớp
                                 for (QueryDocumentSnapshot doc : studentSnapshot) {
                                     Student student = doc.toObject(Student.class);
                                     if (!studentIdsInClass.contains(student.getStudentId())) {
@@ -198,7 +235,6 @@ public class ClassDetailFragment extends Fragment {
             return;
         }
 
-        // Tạo document trong StudentClasses
         Map<String, Object> studentClassData = new HashMap<>();
         studentClassData.put("studentId", student.getStudentId());
         studentClassData.put("classId", classId);
@@ -207,17 +243,15 @@ public class ClassDetailFragment extends Fragment {
         firebaseHelper.getDb().collection("StudentClasses")
                 .add(studentClassData)
                 .addOnSuccessListener(documentReference -> {
-                    // Cập nhật danh sách chính
                     int position = studentList.size();
                     studentList.add(student);
-                    emotionStatsList.add(new HashMap<>());
+                    emotionStatsList.add(new HashMap<>()); // Thêm HashMap rỗng cho học sinh mới
                     Log.d(TAG, "Added student: " + student.getStudentName() +
                             ", studentList size: " + studentList.size() +
                             ", emotionStatsList size: " + emotionStatsList.size());
                     binding.studentCount.setText(studentList.size() + " ");
                     studentEmotionAdapter.notifyItemInserted(position);
 
-                    // Cập nhật danh sách trong dialog
                     int adapterPosition = availableStudents.indexOf(student);
                     if (adapterPosition != -1) {
                         availableStudents.remove(adapterPosition);
@@ -239,32 +273,45 @@ public class ClassDetailFragment extends Fragment {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private void loadClassData(String classId) {
-        firebaseHelper.getEmotionStats(classId, emotionStats -> {
-            if (getActivity() == null) {
-                Log.w(TAG, "Activity is null, cannot update pie chart");
-                return;
+    private void loadClassData(String classId, String selectedDate) {
+        firebaseHelper.getEmotionStatsByDate(classId, selectedDate, new OnEmotionStatsLoadedCallback() {
+            @Override
+            public void onEmotionStatsLoaded(Map<String, Float> emotionStats) {
+                if (getActivity() == null) {
+                    Log.w(TAG, "Activity is null, cannot update pie chart");
+                    return;
+                }
+                Log.d(TAG, "Emotion stats loaded for date " + selectedDate + ": " + emotionStats);
+                setupPieChart(emotionStats);
             }
-            Log.d(TAG, "Emotion stats loaded: " + emotionStats);
-            setupPieChart(emotionStats);
         });
 
-        firebaseHelper.getStudentEmotionStats(classId, (students, emotionStats) -> {
-            if (getActivity() != null) {
+        firebaseHelper.getStudentEmotionStatsByDate(classId, selectedDate, new OnStudentEmotionStatsLoadedCallback() {
+            @Override
+            public void onStudentEmotionStatsLoaded(List<Student> students, List<Map<String, Float>> emotionStats) {
+                if (getActivity() == null) {
+                    Log.w(TAG, "Activity is null, cannot update student list");
+                    return;
+                }
                 Log.d(TAG, "Students loaded: " + students.size() + ", Emotion stats: " + emotionStats.size());
                 studentList.clear();
                 studentList.addAll(students);
                 emotionStatsList.clear();
                 emotionStatsList.addAll(emotionStats);
-                // Đồng bộ emotionStatsList với studentList
+                // Đảm bảo emotionStatsList khớp với studentList
                 while (emotionStatsList.size() < studentList.size()) {
-                    emotionStatsList.add(new HashMap<>());
-                    Log.w(TAG, "Added empty emotion stats to match studentList size: " + studentList.size());
+                    Map<String, Float> emptyStats = new HashMap<>();
+                    emptyStats.put("happy", 0f);
+                    emptyStats.put("sad", 0f);
+                    emptyStats.put("angry", 0f);
+                    emptyStats.put("neutral", 0f);
+                    emptyStats.put("fear", 0f);
+                    emptyStats.put("surprise", 0f);
+                    emotionStatsList.add(emptyStats);
+                    Log.w(TAG, "Added empty emotion stats for student at index: " + emotionStatsList.size());
                 }
                 binding.studentCount.setText(studentList.size() + " ");
                 studentEmotionAdapter.notifyDataSetChanged();
-            } else {
-                Log.w(TAG, "Activity is null, cannot update student list");
             }
         });
     }

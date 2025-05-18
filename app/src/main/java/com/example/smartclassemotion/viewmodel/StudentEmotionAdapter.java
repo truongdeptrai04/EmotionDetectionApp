@@ -36,11 +36,16 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
     @Override
     public void onBindViewHolder(@NonNull StudentEmotionViewHolder holder, int position) {
         Student student = studentList.get(position);
-        // Kiểm tra kích thước emotionStatsList
         Map<String, Float> emotionStats = position < emotionStatsList.size() ? emotionStatsList.get(position) : null;
         if (emotionStats == null) {
             Log.w(TAG, "No emotion stats for student at position: " + position + ", student: " + student.getStudentName());
-            emotionStats = new HashMap<>(); // Tạo HashMap rỗng để tránh lỗi
+            emotionStats = new HashMap<>();
+            emotionStats.put("happy", 0f);
+            emotionStats.put("sad", 0f);
+            emotionStats.put("angry", 0f);
+            emotionStats.put("neutral", 0f);
+            emotionStats.put("fear", 0f);
+            emotionStats.put("surprise", 0f);
         }
         holder.bind(student, emotionStats);
     }
