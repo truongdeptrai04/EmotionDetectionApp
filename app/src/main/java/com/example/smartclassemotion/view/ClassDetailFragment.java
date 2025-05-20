@@ -58,7 +58,7 @@ public class ClassDetailFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentClassDetailBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        firebaseHelper = new FirebaseHelper();
+        firebaseHelper = new FirebaseHelper(getContext());
 
         initializeArgument();
         setupRecyclerView();

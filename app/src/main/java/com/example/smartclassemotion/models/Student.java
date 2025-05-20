@@ -3,6 +3,8 @@ package com.example.smartclassemotion.models;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.PropertyName;
 
+import java.util.List;
+
 public class Student {
     @PropertyName("studentId")
     private String studentId;
@@ -36,7 +38,6 @@ public class Student {
 
     @PropertyName("notes")
     private String notes;
-
     public Student() {
     }
 

@@ -32,7 +32,7 @@ public class SignupFragment extends Fragment {
         // Inflate the layout for this fragment
         binding = FragmentSignupBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        firebaseHelper = new FirebaseHelper();
+        firebaseHelper = new FirebaseHelper(getContext());
         binding.loginBtn1.setOnClickListener(view -> navigateToLoginFragment());
         binding.loginBtn2.setOnClickListener(view -> navigateToLoginFragment());
         binding.signupBtn.setOnClickListener(view -> validateAndSignup());

@@ -28,14 +28,6 @@
                 android:textColor="#161B58"
                 android:fontFamily="@font/agbalumo" />
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/upload_avatar_btn"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:backgroundTint="#E792A4"
-                android:src="@drawable/ic_upload"
-                android:contentDescription="@string/upload_avatar"
-                app:fabSize="mini" />
         </LinearLayout>
 
         <!-- Name -->
@@ -125,6 +117,37 @@
                 android:hint="@string/phone_hint"
                 android:inputType="phone" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Upload Images -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/upload_avatar_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Upload Images (Minimum 7)"
+            android:textColor="@color/white"
+            app:backgroundTint="#E792A4"
+            app:icon="@drawable/ic_upload"
+            app:iconGravity="start"
+            style="@style/Widget.MaterialComponents.Button" />
+
+        <!-- Image RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/image_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+        <!-- Upload Progress -->
+        <ProgressBar
+            android:id="@+id/upload_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <!-- Buttons -->
         <LinearLayout

@@ -1,5 +1,6 @@
 package com.example.smartclassemotion.viewmodel;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,16 +23,18 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
     private List<ClassItem> classList;
     private FirebaseHelper firebaseHelper;
     private final OnClassActionListener actionListener;
+    private final Context context;
 
     public interface OnClassActionListener {
         void onEditClass(ClassItem classItem);
         void onDeleteClass(ClassItem classItem);
     }
 
-    public ClassAdapter(List<ClassItem> classList, String userId, OnClassActionListener actionListener) {
+    public ClassAdapter(Context context, List<ClassItem> classList, String userId, OnClassActionListener actionListener) {
+        this.context = context;
         this.classList = classList;
         this.userId = userId;
-        this.firebaseHelper = new FirebaseHelper();
+        this.firebaseHelper = new FirebaseHelper(context);
         this.actionListener = actionListener;
     }
 
@@ -73,7 +76,7 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
                     })
                     .addOnFailureListener(e -> {
                         binding.studentCount.setText("0");
-                        android.util.Log.e("ClassAdapter", "Error getting student count: " + e.getMessage());
+                        Log.e("ClassAdapter", "Error getting student count: " + e.getMessage());
                     });
 
             binding.classTime.setText(classItem.getFormattedTime());
@@ -85,7 +88,7 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
                 bundle.putString("user_id", userId);
                 bundle.putString("class_id", classItem.getClassId());
                 bundle.putString("class_name", classItem.getClassName());
-                android.util.Log.d("ClassAdapter", "Class ID: " + classItem.getClassId() + ", ClassName: " + classItem.getClassName() + ", User ID: " + userId);
+                Log.d("ClassAdapter", "Class ID: " + classItem.getClassId() + ", ClassName: " + classItem.getClassName() + ", User ID: " + userId);
                 navController.navigate(R.id.action_homeFragment_to_classDetailFragment, bundle);
             });
 
@@ -93,10 +96,10 @@ public class ClassAdapter extends RecyclerView.Adapter<ClassAdapter.ClassViewHol
                 if (actionListener != null) {
                     actionListener.onEditClass(classItem);
                 }
-                android.util.Log.d("ClassAdapter", "Edit button clicked for classId: " + classItem.getClassId());
+                Log.d("ClassAdapter", "Edit button clicked for classId: " + classItem.getClassId());
             });
             binding.deleteBtn.setOnClickListener(view -> {
-                if(actionListener != null){
+                if (actionListener != null) {
                     actionListener.onDeleteClass(classItem);
                 }
                 Log.d("ClassAdapter", "Delete button clicked for classId: " + classItem.getClassId());

@@ -47,7 +47,7 @@ public class StudentProfileFragment extends Fragment {
         binding = FragmentStudentProfileBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        firebaseHelper = new FirebaseHelper();
+        firebaseHelper = new FirebaseHelper(getContext());
         className = new ArrayList<>();
         classIds = new ArrayList<>();
 

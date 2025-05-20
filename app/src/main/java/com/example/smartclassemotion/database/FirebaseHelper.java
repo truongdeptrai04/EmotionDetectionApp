@@ -1,6 +1,12 @@
 package com.example.smartclassemotion.database;
 
+
+import android.content.ContentResolver;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.util.Base64;
 import android.util.Log;
 
 import com.example.smartclassemotion.models.Alert;
@@ -15,6 +21,7 @@ import com.example.smartclassemotion.utils.OnEmotionStatsLoadedCallback;
 import com.example.smartclassemotion.utils.OnImageUploadedCallback;
 import com.example.smartclassemotion.utils.OnMaxClassIdCallback;
 import com.example.smartclassemotion.utils.OnMaxStudentIdCallback;
+import com.example.smartclassemotion.utils.OnMultipleImagesUploadedCallback;
 import com.example.smartclassemotion.utils.OnOperationCompleteCallback;
 import com.example.smartclassemotion.utils.OnStudentCountCallback;
 import com.example.smartclassemotion.utils.OnStudentEmotionStatsLoadedCallback;
@@ -34,7 +41,11 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+import com.google.gson.Gson;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -42,19 +53,38 @@ import java.util.Locale;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class FirebaseHelper {
     private static final String TAG = "FirebaseHelper";
+    private static final String SERVER_URL = "https://5433-58-187-196-90.ngrok-free.app/add_student_with_images";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-    private FirebaseStorage storage;
+    private final Context context;
+    private final OkHttpClient client;
+    private final Gson gson;
 
-    public FirebaseHelper() {
+    public FirebaseHelper(Context context) {
+        this.context = context;
         this.mAuth = FirebaseAuth.getInstance();
         this.db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
+        this.client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+        this.gson = new Gson();
+
     }
+
 
     public FirebaseFirestore getDb() {
         return db;
@@ -350,12 +380,65 @@ public class FirebaseHelper {
                 });
     }
     public void addStudent(Student student, OnOperationCompleteCallback callback) {
-        db.collection("Students").document(student.getStudentId())
-                .set(student)
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
+        // Chuyển Student object thành Map để update
+        Map<String, Object> studentData = new HashMap<>();
+        studentData.put("studentId", student.getStudentId());
+        studentData.put("studentCode", student.getStudentCode());
+        studentData.put("studentName", student.getStudentName());
+        studentData.put("dateOfBirth", student.getDateOfBirth());
+        studentData.put("gender", student.getGender());
+        studentData.put("email", student.getEmail());
+        studentData.put("phone", student.getPhone());
+        studentData.put("avatarUrl", student.getAvatarUrl());
+        studentData.put("status", student.getStatus());
+        studentData.put("notes", student.getNotes());
+        studentData.put("userId", student.getUserId());
+
+        // Kiểm tra document tồn tại
+        db.collection("Students").document(student.getStudentId()).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Document đã tồn tại (do server tạo), dùng update
+                        db.collection("Students")
+                                .document(student.getStudentId())
+                                .update(studentData)
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Cập nhật học sinh thành công: " + student.getStudentId());
+                                    callback.onSuccess();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi cập nhật học sinh: " + e.getMessage(), e);
+                                    callback.onFailure(e);
+                                });
+                    } else {
+                        // Document chưa tồn tại, dùng set với merge
+                        db.collection("Students")
+                                .document(student.getStudentId())
+                                .set(studentData, com.google.firebase.firestore.SetOptions.merge())
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Thêm học sinh thành công: " + student.getStudentId());
+                                    callback.onSuccess();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi thêm học sinh: " + e.getMessage(), e);
+                                    callback.onFailure(e);
+                                });
+                    }
+                })
                 .addOnFailureListener(e -> {
-                    android.util.Log.e("FirebaseHelper", "Failed to add student: " + e.getMessage());
-                    callback.onFailure(e);
+                    Log.e(TAG, "Lỗi khi kiểm tra document: " + e.getMessage(), e);
+                    // Thử set với merge như dự phòng
+                    db.collection("Students")
+                            .document(student.getStudentId())
+                            .set(studentData, com.google.firebase.firestore.SetOptions.merge())
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "Thêm học sinh thành công (dự phòng): " + student.getStudentId());
+                                callback.onSuccess();
+                            })
+                            .addOnFailureListener(err -> {
+                                Log.e(TAG, "Lỗi khi thêm học sinh (dự phòng): " + err.getMessage(), err);
+                                callback.onFailure(err);
+                            });
                 });
     }
 
@@ -368,22 +451,6 @@ public class FirebaseHelper {
                     callback.onFailure(e);
                 });
     }
-
-    public void uploadImage(Uri imageUri, String path, OnImageUploadedCallback callback){
-        StorageReference storageRef = storage.getReference().child(path);
-        storageRef.putFile(imageUri)
-                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl()
-                        .addOnSuccessListener(uri -> callback.onImageUploaded(uri.toString()))
-                        .addOnFailureListener(e -> {
-                            Log.e("FirebaseHelper", "Failed to get download URL: " + e.getMessage());
-                            callback.onError(e);
-                        }))
-                .addOnFailureListener(e -> {
-                    Log.e("FirebaseHelper", "Failed to upload image: " + e.getMessage());
-                    callback.onError(e);
-                });
-    }
-
     public void getMaxClassId(String userId, OnMaxClassIdCallback callback){
         db.collection("Classes")
                 .whereEqualTo("userId", userId)
@@ -757,4 +824,84 @@ public class FirebaseHelper {
                     callback.onStudentSessionEmotionStatsLoaded(emotionStats);
                 });
     }
+
+    public void uploadMultipleImages(String studentId, String studentName, List<Uri> imageUris, OnMultipleImagesUploadedCallback callback) {
+        AtomicInteger uploadCount = new AtomicInteger(0);
+        int totalImages = imageUris.size();
+
+        if (totalImages == 0) {
+            Log.w(TAG, "Danh sách ảnh rỗng");
+            callback.onImagesUploaded();
+            return;
+        }
+
+        // Chuyển tất cả ảnh thành base64
+        List<String> base64Images = new ArrayList<>();
+        for (int i = 0; i < totalImages; i++) {
+            String base64 = convertImageToBase64(imageUris.get(i));
+            if (base64 != null) {
+                base64Images.add(base64);
+            } else {
+                base64Images.add(null);
+                Log.e(TAG, "Không thể chuyển ảnh thành base64 tại index: " + i);
+            }
+        }
+
+        // Tạo payload JSON
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("studentId", studentId);
+        payload.put("studentName", studentName);
+        payload.put("images", base64Images);
+
+        String jsonPayload = gson.toJson(payload);
+        RequestBody requestBody = RequestBody.create(jsonPayload, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(SERVER_URL + "?studentId=" + studentId)
+                .post(requestBody)
+                .build();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws java.io.IOException {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Gửi ảnh thành công cho học sinh " + studentName);
+                    callback.onImagesUploaded();
+                } else {
+                    Log.e(TAG, "Phản hồi server thất bại: " + response.code() + " - " + response.message());
+                    callback.onError(new Exception("Server trả về mã lỗi: " + response.code()));
+                }
+                response.close();
+            }
+
+            @Override
+            public void onFailure(okhttp3.Call call, java.io.IOException e) {
+                Log.e(TAG, "Lỗi kết nối server: " + e.getMessage(), e);
+                callback.onError(e);
+            }
+        });
+    }
+
+    public String convertImageToBase64(Uri uri) {
+        try {
+            ContentResolver resolver = context.getContentResolver();
+            InputStream inputStream = resolver.openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            inputStream.close();
+
+            // Nén ảnh
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos); // Chất lượng 70%
+            byte[] bytes = baos.toByteArray();
+
+            // Chuyển thành base64
+            String base64 = Base64.encodeToString(bytes, Base64.DEFAULT);
+            Log.d(TAG, "Base64 length: " + base64.length() + " for uri: " + uri);
+            return base64;
+        } catch (Exception e) {
+            Log.e(TAG, "Lỗi chuyển ảnh thành base64: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
 }

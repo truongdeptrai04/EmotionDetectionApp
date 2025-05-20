@@ -28,7 +28,7 @@ public class LoginFragment extends Fragment {
         binding = FragmentLoginBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        firebaseHelper = new FirebaseHelper();
+        firebaseHelper = new FirebaseHelper(getContext());
 
         binding.signupBtn1.setOnClickListener(view -> {
             navigateToSignupFragment();

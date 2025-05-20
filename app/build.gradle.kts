@@ -55,4 +55,8 @@ dependencies {
     implementation (libs.library)
     implementation(libs.navigation.fragment)
     implementation (libs.material.v190)
+    implementation (libs.firebase.appcheck)
+    implementation (libs.firebase.appcheck.playintegrity)
+    implementation (libs.okhttp)
+    implementation (libs.gson)
 }

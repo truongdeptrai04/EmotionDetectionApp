@@ -53,7 +53,7 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        firebaseHelper = new FirebaseHelper();
+        firebaseHelper = new FirebaseHelper(getContext());
         classList = new ArrayList<>();
         Bundle args = getArguments();
         if (args != null) {
@@ -65,7 +65,7 @@ public class HomeFragment extends Fragment implements ClassAdapter.OnClassAction
         }
 
         binding.classRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        classAdapter = new ClassAdapter(classList, userId, this); // Truyền this làm OnClassActionListener
+        classAdapter = new ClassAdapter(getContext(),classList, userId, this); // Truyền this làm OnClassActionListener
         binding.classRecyclerView.setAdapter(classAdapter);
 
         loadClassesFromFireStore(userId);
