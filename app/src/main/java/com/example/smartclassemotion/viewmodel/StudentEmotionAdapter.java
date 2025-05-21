@@ -38,7 +38,7 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
         Student student = studentList.get(position);
         Map<String, Float> emotionStats = position < emotionStatsList.size() ? emotionStatsList.get(position) : null;
         if (emotionStats == null) {
-            Log.w(TAG, "No emotion stats for student at position: " + position + ", student: " + student.getStudentName());
+            Log.w(TAG, "Không có thống kê cảm xúc cho học sinh tại vị trí: " + position + ", tên: " + student.getStudentName());
             emotionStats = new HashMap<>();
             emotionStats.put("happy", 0f);
             emotionStats.put("sad", 0f);
@@ -56,12 +56,12 @@ public class StudentEmotionAdapter extends RecyclerView.Adapter<StudentEmotionAd
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void updateData(List<Student> newList, List<Map<String, Float>> emotionStatsList) {
-        Log.d(TAG, "Updating data: studentList size = " + newList.size() + ", emotionStatsList size = " + emotionStatsList.size());
+    public void updateData(List<Student> newList, List<Map<String, Float>> newEmotionStatsList) {
+        Log.d(TAG, "Cập nhật dữ liệu: studentList size = " + newList.size() + ", emotionStatsList size = " + newEmotionStatsList.size());
         this.studentList.clear();
         this.studentList.addAll(newList);
         this.emotionStatsList.clear();
-        this.emotionStatsList.addAll(emotionStatsList);
+        this.emotionStatsList.addAll(newEmotionStatsList);
         notifyDataSetChanged();
     }
 

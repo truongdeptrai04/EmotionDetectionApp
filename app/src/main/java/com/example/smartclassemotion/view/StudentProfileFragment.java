@@ -1,7 +1,11 @@
 package com.example.smartclassemotion.view;
 
 import android.annotation.SuppressLint;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,8 +57,8 @@ public class StudentProfileFragment extends Fragment {
 
         initializeArgument();
         if (studentId == null || userId == null) {
-            Log.e(TAG, "Student ID or User ID is null");
-            showToast("Student ID or User ID is null");
+            Log.e(TAG, "Student ID hoặc User ID là null");
+            showToast("Student ID hoặc User ID là null");
             return root;
         }
 
@@ -70,7 +74,7 @@ public class StudentProfileFragment extends Fragment {
         if (getArguments() != null) {
             studentId = getArguments().getString("student_id");
             userId = getArguments().getString("user_id");
-            Log.d(TAG, "Received student_id: " + studentId + ", user_id: " + userId);
+            Log.d(TAG, "Nhận student_id: " + studentId + ", user_id: " + userId);
         }
     }
 
@@ -102,29 +106,30 @@ public class StudentProfileFragment extends Fragment {
     }
 
     private void loadStudentData() {
-        Log.d(TAG, "Attempting to load student data for student_id: " + studentId);
+        Log.d(TAG, "Đang tải dữ liệu học sinh cho student_id: " + studentId);
         firebaseHelper.getDb().collection("Students").document(studentId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         student = documentSnapshot.toObject(Student.class);
                         if (student != null) {
-                            Log.d(TAG, "Student loaded: " + student.getStudentName() + ", data: " + documentSnapshot.getData());
+                            Log.d(TAG, "Đã tải học sinh: " + student.getStudentName() + ", dữ liệu: " + documentSnapshot.getData());
                             updateStudentUI();
+                            loadAvatarImage(student.getAvatarUrl());
                         } else {
-                            Log.e(TAG, "Failed to parse student object from Firestore");
-                            showToast("Failed to load student data");
+                            Log.e(TAG, "Không thể parse đối tượng học sinh từ Firestore");
+                            showToast("Lỗi khi tải dữ liệu học sinh");
                             resetFields();
                         }
                     } else {
-                        Log.e(TAG, "Student document does not exist for student_id: " + studentId);
-                        showToast("Student not found");
+                        Log.e(TAG, "Tài liệu học sinh không tồn tại cho student_id: " + studentId);
+                        showToast("Không tìm thấy học sinh");
                         resetFields();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load student data: " + e.getMessage(), e);
-                    showToast("Failed to load student data: " + e.getMessage());
+                    Log.e(TAG, "Lỗi khi tải dữ liệu học sinh: " + e.getMessage(), e);
+                    showToast("Lỗi khi tải dữ liệu học sinh: " + e.getMessage());
                     resetFields();
                 });
     }
@@ -154,6 +159,54 @@ public class StudentProfileFragment extends Fragment {
         binding.edtEmail.setText("");
         binding.edtNote.setText("");
         binding.statusSpinner.setSelection(0);
+        binding.imvProfile.setImageResource(R.drawable.ic_profile); // Ảnh mặc định
+    }
+
+    private void loadAvatarImage(String avatarUrl) {
+        if (avatarUrl == null || avatarUrl.isEmpty()) {
+            Log.w(TAG, "avatarUrl là null hoặc rỗng cho student_id: " + studentId);
+            binding.imvProfile.setImageResource(R.drawable.ic_profile);
+            return;
+        }
+
+        // Giải mã Base64 ngoài luồng chính
+        new DecodeBase64Task().execute(avatarUrl);
+    }
+
+    private class DecodeBase64Task extends AsyncTask<String, Void, Bitmap> {
+        @Override
+        protected Bitmap doInBackground(String... params) {
+            String base64Image = params[0];
+            try {
+                // Giải mã Base64 thành byte array
+                byte[] decodedBytes = Base64.decode(base64Image, Base64.DEFAULT);
+                // Tùy chọn để giảm kích thước ảnh nếu cần
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 2; // Giảm kích thước ảnh xuống 1/2 để tối ưu bộ nhớ
+                // Chuyển byte array thành Bitmap
+                return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length, options);
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "Chuỗi Base64 không hợp lệ: " + e.getMessage(), e);
+                return null;
+            } catch (OutOfMemoryError e) {
+                Log.e(TAG, "Lỗi bộ nhớ khi giải mã Base64: " + e.getMessage(), e);
+                return null;
+            } catch (Exception e) {
+                Log.e(TAG, "Lỗi khi giải mã Base64: " + e.getMessage(), e);
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            if (bitmap != null) {
+                binding.imvProfile.setImageBitmap(bitmap);
+                Log.d(TAG, "Đã gán ảnh avatar cho student_id: " + studentId);
+            } else {
+                binding.imvProfile.setImageResource(R.drawable.ic_profile);
+                Log.w(TAG, "Không thể giải mã ảnh avatar, sử dụng ảnh mặc định cho student_id: " + studentId);
+            }
+        }
     }
 
     private void setupClassSpinner() {
@@ -169,21 +222,21 @@ public class StudentProfileFragment extends Fragment {
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 if (isInitialLoad) {
                     isInitialLoad = false;
-                    Log.d(TAG, "Initial spinner selection ignored");
+                    Log.d(TAG, "Bỏ qua lựa chọn spinner ban đầu");
                     return;
                 }
                 if (className.isEmpty()) {
-                    Log.e(TAG, "Class list is empty");
+                    Log.e(TAG, "Danh sách lớp rỗng");
                     return;
                 }
                 String selectedClassId = classIds.get(position);
-                Log.d(TAG, "Selected class: " + className.get(position) + ", classId: " + selectedClassId);
+                Log.d(TAG, "Đã chọn lớp: " + className.get(position) + ", classId: " + selectedClassId);
                 updateEmotionChart(selectedClassId);
             }
 
             @Override
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                Log.d(TAG, "No class selected");
+                Log.d(TAG, "Không có lớp nào được chọn");
             }
         });
         loadClasses();
@@ -191,8 +244,8 @@ public class StudentProfileFragment extends Fragment {
 
     private void loadClasses() {
         if (userId == null) {
-            Log.e(TAG, "User ID is null, cannot load classes");
-            showToast("User ID not found");
+            Log.e(TAG, "User ID là null, không thể tải danh sách lớp");
+            showToast("Không tìm thấy User ID");
             return;
         }
         firebaseHelper.getDb().collection("StudentClasses")
@@ -211,11 +264,11 @@ public class StudentProfileFragment extends Fragment {
                     }
 
                     if (classIdList.isEmpty()) {
-                        Log.w(TAG, "No classes found for student_id: " + studentId);
-                        showToast("No classes found for this student");
+                        Log.w(TAG, "Không tìm thấy lớp nào cho student_id: " + studentId);
+                        showToast("Không tìm thấy lớp nào cho học sinh này");
                         classSpinnerAdapter.notifyDataSetChanged();
                         binding.chartEmotion.clearChart();
-                        binding.chartEmotion.addPieSlice(new PieModel("No Classes", 100, 0xFF9E9E9E));
+                        binding.chartEmotion.addPieSlice(new PieModel("Không có lớp", 100, 0xFF9E9E9E));
                         binding.chartEmotion.startAnimation();
                         return;
                     }
@@ -234,31 +287,31 @@ public class StudentProfileFragment extends Fragment {
                                     }
                                 }
                                 classSpinnerAdapter.notifyDataSetChanged();
-                                Log.d(TAG, "Class list loaded: " + className.size() + " classes for student_id: " + studentId);
+                                Log.d(TAG, "Đã tải danh sách lớp: " + className.size() + " lớp cho student_id: " + studentId);
                                 if (!className.isEmpty()) {
                                     binding.spinnerClass.setSelection(0);
                                     updateEmotionChart(classIds.get(0));
                                 } else {
-                                    Log.w(TAG, "No matching classes found in Classes collection");
-                                    showToast("No matching classes found");
+                                    Log.w(TAG, "Không tìm thấy lớp nào trong collection Classes");
+                                    showToast("Không tìm thấy lớp phù hợp");
                                     binding.chartEmotion.clearChart();
-                                    binding.chartEmotion.addPieSlice(new PieModel("No Classes", 100, 0xFF9E9E9E));
+                                    binding.chartEmotion.addPieSlice(new PieModel("Không có lớp", 100, 0xFF9E9E9E));
                                     binding.chartEmotion.startAnimation();
                                 }
                             })
                             .addOnFailureListener(e -> {
-                                Log.e(TAG, "Failed to load classes: " + e.getMessage(), e);
-                                showToast("Failed to load classes: " + e.getMessage());
+                                Log.e(TAG, "Lỗi khi tải danh sách lớp: " + e.getMessage(), e);
+                                showToast("Lỗi khi tải danh sách lớp: " + e.getMessage());
                                 binding.chartEmotion.clearChart();
-                                binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
+                                binding.chartEmotion.addPieSlice(new PieModel("Lỗi", 100, 0xFF9E9E9E));
                                 binding.chartEmotion.startAnimation();
                             });
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load student classes: " + e.getMessage(), e);
-                    showToast("Failed to load student classes: " + e.getMessage());
+                    Log.e(TAG, "Lỗi khi tải StudentClasses: " + e.getMessage(), e);
+                    showToast("Lỗi khi tải danh sách lớp của học sinh: " + e.getMessage());
                     binding.chartEmotion.clearChart();
-                    binding.chartEmotion.addPieSlice(new PieModel("Error", 100, 0xFF9E9E9E));
+                    binding.chartEmotion.addPieSlice(new PieModel("Lỗi", 100, 0xFF9E9E9E));
                     binding.chartEmotion.startAnimation();
                 });
     }
@@ -266,8 +319,8 @@ public class StudentProfileFragment extends Fragment {
     private void updateEmotionChart(String classId) {
         binding.chartEmotion.clearChart();
         if (studentId == null || classId == null || classId.isEmpty()) {
-            Log.e(TAG, "Student ID or Class ID is null/empty, cannot update emotion chart");
-            binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
+            Log.e(TAG, "Student ID hoặc Class ID là null/rỗng, không thể cập nhật biểu đồ cảm xúc");
+            binding.chartEmotion.addPieSlice(new PieModel("Không có dữ liệu", 100, 0xFF9E9E9E));
             binding.chartEmotion.startAnimation();
             return;
         }
@@ -291,11 +344,11 @@ public class StudentProfileFragment extends Fragment {
                 if (surprise > 0) binding.chartEmotion.addPieSlice(new PieModel("Surprise", surprise, 0xFF2196F3));
 
                 if (happy == 0 && sad == 0 && angry == 0 && neutral == 0 && fear == 0 && surprise == 0) {
-                    Log.d(TAG, "No emotion stats found for student_id: " + studentId + ", class_id: " + classId);
-                    binding.chartEmotion.addPieSlice(new PieModel("No Data", 100, 0xFF9E9E9E));
+                    Log.d(TAG, "Không tìm thấy thống kê cảm xúc cho student_id: " + studentId + ", class_id: " + classId);
+                    binding.chartEmotion.addPieSlice(new PieModel("Không có dữ liệu", 100, 0xFF9E9E9E));
                 }
 
-                Log.d(TAG, "Emotion stats loaded: happy=" + happy + ", sad=" + sad + ", neutral=" + neutral + ", angry=" + angry + ", fear=" + fear + ", surprise=" + surprise);
+                Log.d(TAG, "Đã tải thống kê cảm xúc: happy=" + happy + ", sad=" + sad + ", neutral=" + neutral + ", angry=" + angry + ", fear=" + fear + ", surprise=" + surprise);
                 binding.chartEmotion.startAnimation();
             }
         });
@@ -337,7 +390,7 @@ public class StudentProfileFragment extends Fragment {
 
     private void saveStudentData() {
         if (student == null) {
-            showToast("Student data is null");
+            showToast("Dữ liệu học sinh là null");
             return;
         }
 
@@ -363,8 +416,8 @@ public class StudentProfileFragment extends Fragment {
         firebaseHelper.getDb().collection("Students").document(studentId)
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Student updated: " + name);
-                    showToast("Student updated successfully");
+                    Log.d(TAG, "Đã cập nhật học sinh: " + name);
+                    showToast("Cập nhật học sinh thành công");
                     isEditMode = false;
                     toggleEditMode(false);
                     binding.tvNamestudent.setText(name);
@@ -375,8 +428,8 @@ public class StudentProfileFragment extends Fragment {
                     binding.statusSpinner.setEnabled(false);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to update student: " + e.getMessage(), e);
-                    showToast("Failed to update student: " + e.getMessage());
+                    Log.e(TAG, "Lỗi khi cập nhật học sinh: " + e.getMessage(), e);
+                    showToast("Lỗi khi cập nhật học sinh: " + e.getMessage());
                 });
     }
 
@@ -389,31 +442,31 @@ public class StudentProfileFragment extends Fragment {
 
     private void navigateTo(int actionId) {
         if (userId == null) {
-            showToast("User ID not found");
+            showToast("Không tìm thấy User ID");
             return;
         }
         Bundle bundle = new Bundle();
         bundle.putString("user_id", userId);
         NavController navController = NavHostFragment.findNavController(this);
         navController.navigate(actionId, bundle);
-        Log.d(TAG, "Navigating to Action " + actionId + " with userId: " + userId);
+        Log.d(TAG, "Điều hướng đến Action " + actionId + " với userId: " + userId);
     }
 
     private boolean validateInput(String name, String gender, String phone, String email) {
         if (name.isEmpty()) {
-            showToast("Name cannot be empty");
+            showToast("Tên không được để trống");
             return false;
         }
         if (gender.isEmpty()) {
-            showToast("Gender cannot be empty");
+            showToast("Giới tính không được để trống");
             return false;
         }
         if (!phone.isEmpty() && !phone.matches("^[0-9+]{9,15}$")) {
-            showToast("Phone number is invalid (10 - 15 digits)");
+            showToast("Số điện thoại không hợp lệ (9-15 chữ số)");
             return false;
         }
-        if (!email.isEmpty() && !email.matches("[A-ZA-z0-9+_.-]+@(.+)$")) {
-            showToast("Invalid email format");
+        if (!email.isEmpty() && !email.matches("[A-Za-z0-9+_.-]+@(.+)$")) {
+            showToast("Định dạng email không hợp lệ");
             return false;
         }
         return true;

@@ -38,6 +38,9 @@ public class Student {
 
     @PropertyName("notes")
     private String notes;
+
+    private String embedding;
+
     public Student() {
     }
 
@@ -107,5 +110,11 @@ public class Student {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+    public String getEmbedding() {
+        return embedding;
+    }
+    public void setEmbedding(String embedding) {
+        this.embedding = embedding;
     }
 }

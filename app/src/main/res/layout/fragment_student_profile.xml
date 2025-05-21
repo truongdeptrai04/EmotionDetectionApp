@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="#161B58"
     tools:context=".view.StudentProfileFragment">
@@ -41,15 +42,17 @@
                 android:orientation="horizontal"
                 android:padding="8dp">
 
-                <ImageView
+                <de.hdodenhof.circleimageview.CircleImageView
                     android:id="@+id/imv_profile"
                     android:layout_width="80dp"
                     android:layout_height="80dp"
                     android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_background"
                     android:contentDescription="Profile Image"
                     android:scaleType="centerCrop"
-                    android:src="@drawable/ic_profile" />
+                    android:src="@drawable/ic_profile"
+                    app:civ_border_color="#E792A4"
+                    app:civ_border_width="2dp"
+                    tools:ignore="MissingClass" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -101,7 +104,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:padding="8dp">
-
 
                     <!-- Gender -->
                     <LinearLayout

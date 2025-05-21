@@ -59,4 +59,5 @@ dependencies {
     implementation (libs.firebase.appcheck.playintegrity)
     implementation (libs.okhttp)
     implementation (libs.gson)
+    implementation (libs.circleimageview)
 }
