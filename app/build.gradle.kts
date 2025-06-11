@@ -60,4 +60,5 @@ dependencies {
     implementation (libs.okhttp)
     implementation (libs.gson)
     implementation (libs.circleimageview)
+    implementation(libs.firebase.messaging)
 }

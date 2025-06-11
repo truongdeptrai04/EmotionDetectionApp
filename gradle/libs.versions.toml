@@ -6,6 +6,7 @@ eazegraph = "1.2.2"
 firebaseAppcheck = "17.3.0"
 firebaseAppcheckPlayintegrity = "17.3.0"
 firebaseBom = "33.10.0"
+firebaseMessaging = "24.0.2"
 gson = "2.10.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -32,6 +33,7 @@ firebase-appcheck = { module = "com.google.firebase:firebase-appcheck", version.
 firebase-appcheck-playintegrity = { module = "com.google.firebase:firebase-appcheck-playintegrity", version.ref = "firebaseAppcheckPlayintegrity" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

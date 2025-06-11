@@ -224,6 +224,11 @@
                 android:name="user_id"
                 app:argType="string"/>
         </action>
+        <action
+            android:id="@+id/action_settingFragment_to_loginFragment"
+            app:destination="@+id/loginFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
 
     <!--Report Fragment -->
